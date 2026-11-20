@@ -60,6 +60,19 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 
 ---
 
+### Frontend status (`client-end/`, updated 2026-11-20) — see [frontend-plan.md](frontend-plan.md)
+
+| Step | Status | Evidence |
+|---|---|---|
+| F0 tokens + Tailwind aliases, template removed | IN REVIEW | `client-end/styles/tokens.css`, `app/globals.css`; `npx tsc --noEmit` exit 0, `npm run lint` exit 0, `npm run build` OK |
+| F1 protocol mirror, reducer, host bridge | IN REVIEW | `lib/protocol/*`, `lib/store/reducer.ts`, `lib/host/*`. Mirror of `packages/protocol` (not yet created); message additions listed in frontend-plan §5 need agreement with the extension owner |
+| F2–F6 primitives + product components (Agent, Composer, Diff Review, Context Inspector, Plan, Timeline, banners, Welcome, Model config, Settings) | IN REVIEW | `components/ui/*`, `components/forge/*`. Exercised in headless Chrome against the mock host: Task B flow (stream → terminal approval → review gate → per-hunk accept/reject → apply → undo), C-error (3 retries → error, "workspace unchanged"), C-fallback (banner → diff), cancel mid-run (no spinners left, 3/3 runs), 0 page errors |
+| F7 harness (`/`) with scripted scenarios | IN REVIEW | `app/Harness.tsx`, `lib/host/mockHost.ts`. **Mock data only — not the product; the demo video must use the real extension + TrueForge** |
+| F8 webview bundle | IN REVIEW | `npm run build:webview` emits `dist/webview/main.{js,css}` (~800 kB JS). **Not yet loaded in a real VS Code webview** — needs `WebviewViewProvider` + nonce CSP from the extension |
+| F9 polish (themes, axe, Playwright suite, virtualised timeline, 280 px width pass) | NOT STARTED | No axe run, no automated UI tests committed, light/high-contrast themes unverified |
+
+Not verified: behaviour inside VS Code; real TrueForge event shapes (spikes S1–S4); screen-reader behaviour; widths below 360 px.
+
 ## B. Overall Progress Dashboard
 
 | Module | Status | Completion | Priority | Owner | Notes / evidence |

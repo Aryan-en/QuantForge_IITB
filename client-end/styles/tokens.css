@@ -1,0 +1,89 @@
+/*
+ * FORGE design tokens — Ui-regitry.md §B.1.
+ * Host layer (VS Code theme vars) → FORGE semantic tokens → Tailwind aliases (app/globals.css).
+ * Standalone values apply in the Next.js harness, where no --vscode-* vars exist.
+ */
+:root {
+  --forge-bg: var(--vscode-sideBar-background, #0b0d10);
+  --forge-surface: var(--vscode-editor-background, #12151a);
+  --forge-raised: var(--vscode-editorWidget-background, #181c22);
+  --forge-overlay: var(--vscode-menu-background, #1f242c);
+  --forge-border: var(--vscode-panel-border, #2e3540);
+  --forge-border-subtle: color-mix(in srgb, var(--forge-border) 50%, transparent);
+  --forge-text: var(--vscode-foreground, #e6e9ee);
+  --forge-text-muted: var(--vscode-descriptionForeground, #a3acb9);
+  --forge-text-faint: #8590a0;
+  --forge-accent: #f5792a;
+  --forge-accent-hover: #ff8f4a;
+  --forge-accent-fg: #1a0e05;
+  --forge-accent-soft: color-mix(in srgb, var(--forge-accent) 14%, transparent);
+  --forge-focus: var(--vscode-focusBorder, #58a6ff);
+  --forge-success: #3fb950;
+  --forge-warning: #d29922;
+  --forge-danger: #f85149;
+  --forge-info: #58a6ff;
+  --forge-success-soft: color-mix(in srgb, var(--forge-success) 14%, transparent);
+  --forge-warning-soft: color-mix(in srgb, var(--forge-warning) 14%, transparent);
+  --forge-danger-soft: color-mix(in srgb, var(--forge-danger) 14%, transparent);
+  --forge-info-soft: color-mix(in srgb, var(--forge-info) 14%, transparent);
+  --forge-diff-add-bg: rgba(63, 185, 80, 0.16);
+  --forge-diff-add-fg: #7ee787;
+  --forge-diff-del-bg: rgba(248, 81, 73, 0.16);
+  --forge-diff-del-fg: #ff7b72;
+  --forge-diff-chg-bg: rgba(210, 153, 34, 0.16);
+
+  --forge-font-sans: var(--vscode-font-family, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif);
+  --forge-font-mono: var(--vscode-editor-font-family, ui-monospace, "Cascadia Code", "SF Mono", Menlo, Consolas, monospace);
+  --forge-font-size: var(--vscode-font-size, 13px);
+
+  --forge-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --forge-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  --forge-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.35);
+
+  --forge-ease: cubic-bezier(0.2, 0, 0, 1);
+  --forge-dur-fast: 80ms;
+  --forge-dur-med: 140ms;
+  --forge-dur-slow: 220ms;
+}
+
+body.vscode-light,
+:root[data-theme="light"] {
+  --forge-bg: #f6f8fa;
+  --forge-surface: #ffffff;
+  --forge-raised: #ffffff;
+  --forge-overlay: #ffffff;
+  --forge-border: #d0d7de;
+  --forge-text: #1f2328;
+  --forge-text-muted: #57606a;
+  --forge-text-faint: #66707b;
+  --forge-accent: #c2510f;
+  --forge-accent-hover: #a8430a;
+  --forge-accent-fg: #ffffff;
+  --forge-success: #1a7f37;
+  --forge-warning: #9a6700;
+  --forge-danger: #cf222e;
+  --forge-info: #0969da;
+  --forge-diff-add-bg: rgba(26, 127, 55, 0.12);
+  --forge-diff-add-fg: #1a7f37;
+  --forge-diff-del-bg: rgba(207, 34, 46, 0.12);
+  --forge-diff-del-fg: #cf222e;
+  --forge-shadow-sm: 0 1px 2px rgba(31, 35, 40, 0.08);
+  --forge-shadow-md: 0 4px 12px rgba(31, 35, 40, 0.12);
+  --forge-shadow-lg: 0 8px 24px rgba(31, 35, 40, 0.16);
+}
+
+body.vscode-high-contrast,
+body.vscode-high-contrast-light {
+  --forge-border: var(--vscode-contrastBorder, #6fc3df);
+  --forge-diff-add-bg: transparent;
+  --forge-diff-del-bg: transparent;
+  --forge-accent-soft: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --forge-dur-fast: 0ms;
+    --forge-dur-med: 0ms;
+    --forge-dur-slow: 0ms;
+  }
+}

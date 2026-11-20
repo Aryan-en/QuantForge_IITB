@@ -1,0 +1,30 @@
+/* Editor syntax colours for the preview frame only (not used by the shipped webview). */
+:root {
+  --syn-kw: #ff7b72;
+  --syn-str: #a5d6ff;
+  --syn-com: #8b949e;
+  --syn-fn: #d2a8ff;
+  --syn-ty: #ffa657;
+  --syn-num: #79c0ff;
+  --syn-deco: #d2a8ff;
+  --syn-line: #8590a0;
+}
+:root[data-theme="light"],
+body.vscode-light {
+  --syn-kw: #cf222e;
+  --syn-str: #0a3069;
+  --syn-com: #57606a;
+  --syn-fn: #8250df;
+  --syn-ty: #953800;
+  --syn-num: #0550ae;
+  --syn-deco: #8250df;
+  --syn-line: #66707b;
+}
+.syn-kw { color: var(--syn-kw); }
+.syn-str { color: var(--syn-str); }
+.syn-com { color: var(--syn-com); font-style: italic; }
+.syn-fn { color: var(--syn-fn); }
+.syn-ty { color: var(--syn-ty); }
+.syn-num { color: var(--syn-num); }
+.syn-deco { color: var(--syn-deco); }
+.syn-gutter { color: var(--syn-line); }
