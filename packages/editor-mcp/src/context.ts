@@ -33,7 +33,28 @@ export class CancelRegistry {
   }
 }
 
+/** Output sizes tuned to the smallest model FORGE may use, so tool results never overflow a small model's context window. */
+export interface OutputLimits {
+  defaultBudgetTokens: number;
+  maxBudgetTokens: number;
+  maxOutputChars: number;
+}
+export const DEFAULT_LIMITS: OutputLimits = { defaultBudgetTokens: 24_000, maxBudgetTokens: 200_000, maxOutputChars: 64 * 1024 };
+
+/** Derive limits from a model's context window (tokens): context budget ≈ 20% (max 30%), single tool output ≈ 12%. */
+export function limitsForContext(contextTokens: number | undefined): OutputLimits {
+  if (!contextTokens || contextTokens <= 0) return DEFAULT_LIMITS;
+  const clamp = (v: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, v));
+  return {
+    defaultBudgetTokens: clamp(Math.floor(contextTokens * 0.2), 1000, DEFAULT_LIMITS.defaultBudgetTokens),
+    maxBudgetTokens: clamp(Math.floor(contextTokens * 0.3), 1500, DEFAULT_LIMITS.maxBudgetTokens),
+    maxOutputChars: clamp(Math.floor(contextTokens * 4 * 0.12), 4000, DEFAULT_LIMITS.maxOutputChars),
+  };
+}
+
 export interface ToolContext {
+  /** Mutable: the host updates this when the selected model(s) change. */
+  limits: OutputLimits;
   cancel: CancelRegistry;
   root: string;
   ws: NodeWorkspace;

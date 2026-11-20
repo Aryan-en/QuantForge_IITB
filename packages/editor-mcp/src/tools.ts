@@ -2,7 +2,7 @@ import { promises as fs, existsSync } from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { z } from "zod";
-import { assembleContext, DEFAULT_BUDGET_TOKENS, renderBundle, estimateTokens } from "@forge/context-engine";
+import { assembleContext, renderBundle, estimateTokens } from "@forge/context-engine";
 import { contentHash, ProposeError } from "@forge/diff-engine";
 import {
   fail, ReadFileInput, SearchWorkspaceInput, FindSymbolInput, GetFileStructureInput, GetContextInput, ProposeEditInput,
@@ -14,7 +14,6 @@ import { evaluateCommand } from "./policy.js";
 import { runProcess, scrubbedEnv } from "./terminal.js";
 
 const MAX_READ_BYTES = 512 * 1024;
-const MAX_OUT_CHARS = 64 * 1024;
 
 function numbered(lines: string[], start: number): string {
   const w = String(start + lines.length - 1).length;
@@ -62,8 +61,8 @@ const read_file = def({
     let slice = all.slice(start - 1, end);
     let body = numbered(slice, start);
     let truncated = false;
-    if (body.length > MAX_OUT_CHARS || slice.length > 2000) {
-      const t = truncate(body, MAX_OUT_CHARS);
+    if (body.length > ctx.limits.maxOutputChars || slice.length > 2000) {
+      const t = truncate(body, ctx.limits.maxOutputChars);
       const keep = t.text.split("\n");
       keep.pop();
       slice = slice.slice(0, Math.min(keep.length, 2000));
@@ -175,7 +174,7 @@ const get_context = def({
   annotations: { readOnlyHint: true, idempotentHint: true },
   async handler(input, ctx, signal) {
     const files = input.focusPaths?.length ? input.focusPaths : undefined;
-    const bundle = await assembleContext(ctx.ws, { query: input.query, mentions: input.mentions, budgetTokens: input.budgetTokens ?? DEFAULT_BUDGET_TOKENS, focusPaths: files, signal }, ctx.index);
+    const bundle = await assembleContext(ctx.ws, { query: input.query, mentions: input.mentions, budgetTokens: Math.min(input.budgetTokens ?? ctx.limits.defaultBudgetTokens, ctx.limits.maxBudgetTokens), focusPaths: files, signal }, ctx.index);
     ctx.emit({ type: "context", query: input.query, bundle });
     return {
       ok: true,
@@ -192,7 +191,7 @@ const propose_edit = def({
   name: "propose_edit",
   title: "Propose an edit (does not write)",
   description:
-    "Propose a change to ONE file. Nothing is written to disk: proposals are queued for human review. Prefer `edits` with {oldText,newText} (oldText must match exactly once, copied WITHOUT line-number prefixes); {range:{startLine,endLine},newText} replaces whole lines (1-based, inclusive; empty newText deletes). Use newContent (+create:true) for new files, delete:true to remove a file. Pass baseHash from read_file. Always include a short rationale. After all proposals are queued, call submit_changes once.",
+    "Propose a change to ONE file. Nothing is written to disk: proposals are queued for human review. Prefer `edits` with {oldText,newText} (oldText must match exactly once, copied WITHOUT line-number prefixes); {range:{startLine,endLine},newText} replaces whole lines (1-based, inclusive; empty newText deletes). Use newContent (+create:true) for new files, delete:true to remove a file. Pass baseHash from read_file. Always include a short rationale. After all proposals are queued you MUST call submit_changes once — proposals alone are discarded.",
   schema: ProposeEditInput,
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
   async handler(input, ctx) {
@@ -207,7 +206,7 @@ const propose_edit = def({
       ctx.emit({ type: "proposal", proposalId: proposal.id, path: proposal.path });
       const added = proposal.hunks.reduce((n, h) => n + h.added, 0);
       const removed = proposal.hunks.reduce((n, h) => n + h.removed, 0);
-      return { ok: true, proposalId: proposal.id, status: "queued", kind: proposal.kind, hunks: proposal.hunks.length, linesAdded: added, linesRemoved: removed, nextContentHash: proposal.proposedText === null ? null : contentHash(proposal.proposedText), note: "queued for review; nothing has been written. Call submit_changes when all edits are proposed." };
+      return { ok: true, proposalId: proposal.id, status: "queued", kind: proposal.kind, hunks: proposal.hunks.length, linesAdded: added, linesRemoved: removed, nextContentHash: proposal.proposedText === null ? null : contentHash(proposal.proposedText), note: "queued for review; nothing has been written. NEXT STEP: call submit_changes (your work is discarded otherwise) once all edits are proposed." };
     } catch (e) {
       if (e instanceof ProposeError) return fail(e.code, e.message, e.code === "STALE_BASE" ? "call read_file again and retry with the new contentHash" : undefined);
       throw e;
@@ -275,7 +274,10 @@ const run_terminal = def({
     const res = await runProcess({ argv: decision.argv, cwd, env, timeoutMs: input.timeoutMs ?? 60_000, signal });
     if (res.cancelled) return fail("CANCELLED", "command was cancelled");
     if (res.timedOut) return fail("TIMEOUT", `command exceeded ${input.timeoutMs ?? 60_000} ms and was killed`, "narrow the command (e.g. run a single test file)");
-    return { ok: true, exitCode: res.exitCode, stdout: res.stdout, stderr: res.stderr, durationMs: res.durationMs, truncated: res.truncated, ranIn: useShadow ? "shadow" : "workspace" };
+    // keep the TAIL of long output (test summaries and tracebacks are at the end) within the model-sized limit
+    const cap = ctx.limits.maxOutputChars;
+    const tail = (s: string): string => (s.length > cap ? `…[truncated ${s.length - cap} chars]…\n${s.slice(-cap)}` : s);
+    return { ok: true, exitCode: res.exitCode, stdout: tail(res.stdout), stderr: tail(res.stderr), durationMs: res.durationMs, truncated: res.truncated || res.stdout.length > cap || res.stderr.length > cap, ranIn: useShadow ? "shadow" : "workspace" };
   },
 });
 

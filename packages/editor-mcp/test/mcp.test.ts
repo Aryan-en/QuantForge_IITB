@@ -272,3 +272,37 @@ describe("terminal safety", () => {
     expect(orphans(m)).toBe(0);
   });
 });
+
+
+describe("output limits sized to the model's context window", () => {
+  it("limitsForContext scales with the window and stays within sane bounds", async () => {
+    const { limitsForContext, DEFAULT_LIMITS } = await import("../src/index.js");
+    expect(limitsForContext(undefined)).toEqual(DEFAULT_LIMITS);
+    const small = limitsForContext(16384);
+    expect(small.defaultBudgetTokens).toBe(3276);
+    expect(small.maxBudgetTokens).toBe(4915);
+    expect(small.maxOutputChars).toBeLessThan(DEFAULT_LIMITS.maxOutputChars);
+    expect(limitsForContext(1_000_000)).toEqual({ ...DEFAULT_LIMITS, maxBudgetTokens: DEFAULT_LIMITS.maxBudgetTokens });
+    expect(limitsForContext(2000).defaultBudgetTokens).toBeGreaterThanOrEqual(1000);
+  });
+  it("get_context, read_file and run_terminal never exceed what a 16k-token model can take", async () => {
+    const old = ctx.limits;
+    const { limitsForContext } = await import("../src/index.js");
+    ctx.limits = limitsForContext(16384);
+    try {
+      w("big.py", Array.from({ length: 3000 }, (_, i) => `value_${i} = "${"x".repeat(60)}"`).join("\n") + "\n");
+      const c1 = await call("get_context", { query: "value helpers config cli debug flag" });
+      expect(c1.budgetTokens).toBeLessThanOrEqual(3276);
+      expect(c1.usedTokens).toBeLessThanOrEqual(3276);
+      const c2 = await call("get_context", { query: "value helpers config cli debug flag", budgetTokens: 150000 });
+      expect(c2.budgetTokens).toBeLessThanOrEqual(4915); // an over-eager request is clamped
+      const rf = await call("read_file", { path: "big.py", range: { startLine: 1, endLine: 2000 } });
+      expect(rf.truncated).toBe(true);
+      expect(rf.content.length).toBeLessThanOrEqual(ctx.limits.maxOutputChars);
+      expect(rf.hint).toMatch(/continue with range/);
+      const rt = await call("run_terminal", { command: "python3 -c \"print('y'*50000)\"", reason: "x" });
+      expect(rt.stdout.length).toBeLessThan(ctx.limits.maxOutputChars + 100);
+      expect(rt.truncated).toBe(true);
+    } finally { ctx.limits = old; }
+  });
+});

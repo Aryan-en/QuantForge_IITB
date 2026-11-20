@@ -5,7 +5,7 @@
 ## Model setup (done in TrueForge, not FORGE)
 1. Start TrueForge in local mode so FORGE's loopback tool server is reachable (TrueForge blocks loopback URLs by default):
    ```bash
-   OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest
+   MODEL_HTTP_HEADERS_TIMEOUT_MS=300000 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest
    ```
    (The VS Code command **FORGE: Start TrueForge** does exactly this.)
 2. Open http://localhost:8790 → **Settings → Models**. Add a catalog provider with its API key, **or** a `custom` provider pointing at any OpenAI-compatible endpoint (a local server such as Ollama/vLLM works, keeping code on your machine).

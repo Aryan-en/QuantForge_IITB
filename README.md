@@ -136,7 +136,7 @@ Facts below were verified against a real local TrueForge on 2026-11-20.
 
 1. **Start TrueForge** (local mode, SQLite). It must be allowed to call FORGE's loopback tool server, which its SSRF guard blocks by default:
    ```bash
-   OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest
+   MODEL_HTTP_HEADERS_TIMEOUT_MS=300000 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest
    ```
    Open http://localhost:8790 (or `--port N`). The VS Code command **FORGE: Start TrueForge (local mode)** does this for you. Keep it on localhost (TrueForge documents local mode as personal-use, no login).
 2. **Configure models** in TrueForge → Settings → Models (catalog provider + key, or a `custom` OpenAI-compatible endpoint, e.g. a local model). Configure **two** to enable automatic fallback. Keys never touch FORGE or this repo.

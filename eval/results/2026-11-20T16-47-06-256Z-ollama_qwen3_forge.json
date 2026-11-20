@@ -1,0 +1,63 @@
+{
+ "at": "2026-11-20T16:47:06.256Z",
+ "tf": "http://localhost:18790",
+ "model": "ollama/qwen3-forge",
+ "params": {
+  "reasoning_effort": "medium"
+ },
+ "results": [
+  {
+   "diff": "",
+   "proposed": [],
+   "usedSafetyNet": false,
+   "task": "A",
+   "model": "ollama/qwen3-forge",
+   "modelsTried": [
+    "ollama/qwen3-forge"
+   ],
+   "status": "error",
+   "passed": false,
+   "checks": [
+    {
+     "name": "turn completed",
+     "pass": false,
+     "detail": "error STALLED: The model stopped responding"
+    },
+    {
+     "name": "FLASK_DEBUG=off → False (statement's verification)",
+     "pass": false,
+     "detail": "True"
+    },
+    {
+     "name": "'n', 'N', 'OFF' → False",
+     "pass": false
+    },
+    {
+     "name": "existing behaviour kept: 0/false/no → False, 1/true → True",
+     "pass": true
+    },
+    {
+     "name": "docstring lists every false value (0, false, no, off, n)",
+     "pass": false,
+     "detail": "Get whether debug mode should be enabled for the app, indicated by the :envvar:`FLASK_DEBUG` environment variable. The default is ``False``. "
+    },
+    {
+     "name": "only src/flask/helpers.py changed",
+     "pass": false
+    }
+   ],
+   "toolTrace": [
+    "read_file"
+   ],
+   "subagents": 0,
+   "durationS": 353,
+   "tokens": null,
+   "finalText": "",
+   "notices": [
+    "retry 1 (The model stopped responding)",
+    "failed: The model stopped responding"
+   ],
+   "error": "STALLED: The model stopped responding"
+  }
+ ]
+}

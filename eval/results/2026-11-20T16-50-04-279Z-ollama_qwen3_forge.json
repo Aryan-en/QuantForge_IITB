@@ -1,0 +1,56 @@
+{
+ "at": "2026-11-20T16:50:04.280Z",
+ "tf": "http://localhost:18790",
+ "model": "ollama/qwen3-forge",
+ "params": {
+  "reasoning_effort": "none"
+ },
+ "results": [
+  {
+   "diff": "",
+   "proposed": [],
+   "usedSafetyNet": false,
+   "task": "C",
+   "model": "ollama-dead/mdl → ollama/qwen3-forge",
+   "modelsTried": [
+    "ollama-dead/mdl",
+    "ollama/qwen3-forge"
+   ],
+   "status": "error",
+   "passed": false,
+   "checks": [
+    {
+     "name": "turn completed",
+     "pass": false,
+     "detail": "error MODEL_UNAVAILABLE: Cannot reach the model endpoint"
+    },
+    {
+     "name": "workspace never silently changed (only an approved change, or nothing)",
+     "pass": true
+    },
+    {
+     "name": "failure was visible (notice) — fallback or clear error",
+     "pass": true,
+     "detail": "retry 1 (Cannot reach the model endpoint) | fallback ollama-dead/mdl -> ollama/qwen3-forge: Cannot reach the model endpoint | retry 1 (The model stopped responding) | failed: Cannot reach the model endpoint"
+    },
+    {
+     "name": "clear error and zero files changed",
+     "pass": true,
+     "detail": "MODEL_UNAVAILABLE: Cannot reach the model endpoint / "
+    }
+   ],
+   "toolTrace": [],
+   "subagents": 0,
+   "durationS": 163,
+   "tokens": 0,
+   "finalText": "",
+   "notices": [
+    "retry 1 (Cannot reach the model endpoint)",
+    "fallback ollama-dead/mdl -> ollama/qwen3-forge: Cannot reach the model endpoint",
+    "retry 1 (The model stopped responding)",
+    "failed: Cannot reach the model endpoint"
+   ],
+   "error": "MODEL_UNAVAILABLE: Cannot reach the model endpoint"
+  }
+ ]
+}

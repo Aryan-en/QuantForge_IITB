@@ -26,7 +26,7 @@ export function classifyMessage(message: string): Classified {
     return { errorClass: "UNKNOWN", retryable: false, maxAttempts: 1, title: `Model request failed (${code})`, hint: "See details." };
   }
   if (/Cannot connect to API|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|other side closed|socket hang up|ETIMEDOUT/i.test(message)) {
-    return { errorClass: "MODEL_UNAVAILABLE", retryable: true, maxAttempts: 2, title: "Cannot reach the model endpoint", hint: "Check the endpoint/base URL in TrueForge → Settings → Models, or configure a fallback model." };
+    return { errorClass: "MODEL_UNAVAILABLE", retryable: true, maxAttempts: 2, title: "Cannot reach the model endpoint", hint: "Check the endpoint/base URL in TrueForge → Settings → Models, or configure a fallback model. For a slow local model, start TrueForge with MODEL_HTTP_HEADERS_TIMEOUT_MS=300000 (its default is 20 s)." };
   }
   if (/stalled|no events? for/i.test(message)) return { errorClass: "STALLED", retryable: true, maxAttempts: 2, title: "The model stopped responding", hint: "Retrying; a fallback model will take over if it persists." };
   return { errorClass: "UNKNOWN", retryable: false, maxAttempts: 1, title: "The agent run failed", hint: message.slice(0, 300) };

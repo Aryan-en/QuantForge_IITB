@@ -2,7 +2,7 @@ import path from "node:path";
 import os from "node:os";
 import { NodeWorkspace, RepoIndex } from "@forge/context-engine";
 import { NodeFileStore, ReviewQueue, type FileStore, UndoJournal, FileJournalStore, MemoryJournalStore } from "@forge/diff-engine";
-import { CancelRegistry, type ForgeEvent, type ToolContext } from "./context.js";
+import { CancelRegistry, DEFAULT_LIMITS, limitsForContext, type ForgeEvent, type ToolContext } from "./context.js";
 import { ShadowWorkspace } from "./shadow.js";
 
 export interface RuntimeOptions {
@@ -16,6 +16,8 @@ export interface RuntimeOptions {
   onEvent?: (e: ForgeEvent) => void;
   persistJournal?: boolean;
   extraPath?: string[];
+  /** Context window (tokens) of the smallest model that may run the task; sizes tool output accordingly. */
+  modelContextTokens?: number;
   /** Replace the default filesystem store (the extension supplies a WorkspaceEdit-backed one). */
   store?: FileStore;
   diagnostics?: ToolContext["diagnostics"];
@@ -33,6 +35,7 @@ export async function createToolContext(o: RuntimeOptions): Promise<ToolContext>
   const sessionId = o.sessionId ?? `s_${Date.now().toString(36)}`;
   return {
     cancel: new CancelRegistry(),
+    limits: o.modelContextTokens ? limitsForContext(o.modelContextTokens) : DEFAULT_LIMITS,
     root, ws, index: new RepoIndex(ws), review, store,
     shadow: o.shadow === false ? null : new ShadowWorkspace(ws, storageDir, sessionId, review),
     reviewMode: o.reviewMode ?? "host",

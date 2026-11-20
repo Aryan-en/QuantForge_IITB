@@ -14,7 +14,7 @@ const line = (ok: boolean | "warn", msg: string): void => { console.log(`${ok ==
 
 const api = new TrueForgeApi(tfUrl);
 const probe = await api.probe();
-line(probe.ok, probe.ok ? `TrueForge reachable at ${tfUrl} (${probe.latencyMs} ms)` : `TrueForge NOT reachable at ${tfUrl}: start with  OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest`);
+line(probe.ok, probe.ok ? `TrueForge reachable at ${tfUrl} (${probe.latencyMs} ms)` : `TrueForge NOT reachable at ${tfUrl}: start with  MODEL_HTTP_HEADERS_TIMEOUT_MS=300000 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest`);
 if (probe.ok) {
   const models = await api.listModels();
   line(models.length >= 1, `${models.length} model(s) configured in TrueForge: ${models.map((m) => m.name).slice(0, 6).join(", ") || "none"}`);

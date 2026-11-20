@@ -4,7 +4,7 @@ Rules from the statement: Tasks **A → B → C in that order**, each followed b
 
 ## Before you press record
 ```bash
-OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest   # terminal 1
+MODEL_HTTP_HEADERS_TIMEOUT_MS=300000 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest   # terminal 1
 npm run preflight                                                                      # must say READY TO RECORD
 code --extensionDevelopmentPath="$PWD/packages/extension" "$PWD/eval/work/flask"       # or the installed .vsix
 ```

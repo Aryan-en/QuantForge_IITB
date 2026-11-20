@@ -3,7 +3,7 @@ import path from "node:path";
 import { createHash, randomBytes } from "node:crypto";
 import { promises as fsp } from "node:fs";
 import { getLastParserError, parseFile, parseMentions, SqliteSymbolIndex, suggestMentions } from "@forge/context-engine";
-import { createToolContext, startForgeMcpHttp, type ForgeEvent, type RunningServer, type ToolContext } from "@forge/editor-mcp";
+import { createToolContext, limitsForContext, startForgeMcpHttp, type ForgeEvent, type RunningServer, type ToolContext } from "@forge/editor-mcp";
 import { loadAgent, runResilient, runTurn, TrueForgeApi, type AgentSpec, type ApprovalDecision, type ForgeStreamEvent, type Notice, type ToolCallInfo } from "@forge/trueforge-client";
 import { parseWebviewMessage, type PlanStep, type ReviewQueueState, type TimelineEvent, type UserFacingError, type WebviewToHost } from "@forge/protocol";
 import { VsCodeFileStore } from "./vscodeStore.js";
@@ -337,6 +337,13 @@ export class ForgeController implements vscode.Disposable {
     const models = [primary, ...cfg<string[]>("model.fallbacks", []).filter((m) => m && m !== primary)];
     await this.checkConnection();
     if (this.state.connection !== "ok") return;
+    // Size tool output to the SMALLEST context window among the models that may run this task (a fallback may take over).
+    try {
+      const info = await this.api.listModels();
+      const ctxLens = models.map((m) => info.find((i) => i.name === m)?.contextLength).filter((n): n is number => typeof n === "number" && n > 0);
+      this.tool.limits = limitsForContext(ctxLens.length ? Math.min(...ctxLens) : undefined);
+      this.log(`tool output limits: ${JSON.stringify(this.tool.limits)} (model contexts: ${ctxLens.join(", ") || "unknown"})`);
+    } catch { /* keep previous limits */ }
 
     const { mentions, text } = parseMentions(rawText);
     const prompt = `${inlineHeader}${text}${mentions.length ? `\n\n[FORGE mentions — pass these as \`mentions\` to get_context]\n${JSON.stringify(mentions)}` : ""}`;

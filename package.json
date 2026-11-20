@@ -17,7 +17,8 @@
     "package": "node scripts/build.mjs && cd packages/extension && npx --yes @vscode/vsce package --no-dependencies --target $(node -p \"process.platform+'-'+process.arch\") -o forge-$(node -p \"process.platform+'-'+process.arch\").vsix",
     "preflight": "tsx scripts/preflight.mts",
     "writeup": "scripts/build-writeup.sh",
-    "notices": "node scripts/notices.mjs"
+    "notices": "node scripts/notices.mjs",
+    "eval:real": "tsx eval/run-real.mts"
   },
   "engines": {
     "node": ">=22.14"
