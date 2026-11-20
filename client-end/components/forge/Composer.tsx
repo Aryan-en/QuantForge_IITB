@@ -1,14 +1,14 @@
 "use client";
 
 import { ArrowUp, AtSign, Braces, FileText, Square } from "lucide-react";
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { IconButton } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
 import { Kbd } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
-import type { Mention } from "@/lib/protocol";
+import type { Mention, MentionCandidate } from "@/lib/protocol";
 
-export type MentionCandidate = { kind: "file"; path: string } | { kind: "symbol"; name: string; path: string };
+export type { MentionCandidate };
 
 function candidateLabel(c: MentionCandidate): string {
   return c.kind === "file" ? c.path : c.name;
@@ -24,6 +24,8 @@ export function Composer({
   disabled,
   disabledReason,
   mentionSource,
+  remoteMentions = [],
+  onMentionQuery,
   onSubmit,
   onStop,
   placeholder = "Describe a task. Type @ to add files or symbols.",
@@ -33,7 +35,10 @@ export function Composer({
   cancelling: boolean;
   disabled?: boolean;
   disabledReason?: string;
+  /** Static suggestions (filtered locally). When empty, `remoteMentions` + `onMentionQuery` are used. */
   mentionSource: MentionCandidate[];
+  remoteMentions?: MentionCandidate[];
+  onMentionQuery?: (query: string) => void;
   onSubmit: (text: string, mentions: Mention[]) => void;
   onStop: () => void;
   placeholder?: string;
@@ -46,11 +51,20 @@ export function Composer({
   const ref = useRef<HTMLTextAreaElement>(null);
   const listId = useId();
 
+  const remote = mentionSource.length === 0 && Boolean(onMentionQuery);
   const results = useMemo(() => {
     if (query === null) return [];
+    if (remote) return remoteMentions.slice(0, 10);
     const q = query.toLowerCase();
     return mentionSource.filter((c) => candidateLabel(c).toLowerCase().includes(q)).slice(0, 8);
-  }, [query, mentionSource]);
+  }, [query, mentionSource, remote, remoteMentions]);
+
+  // Ask the host for suggestions (debounced) when the picker is open and the host owns the index.
+  useEffect(() => {
+    if (!remote || query === null) return;
+    const id = setTimeout(() => onMentionQuery?.(query), 120);
+    return () => clearTimeout(id);
+  }, [remote, query, onMentionQuery]);
 
   const listOpen = query !== null;
 
@@ -66,7 +80,7 @@ export function Composer({
     const caret = el?.selectionStart ?? text.length;
     const before = text.slice(0, caret).replace(/@([\w./-]*)$/, "");
     const after = text.slice(caret);
-    const token = c.kind === "file" ? `@${c.path}` : `@${c.name}`;
+    const token = `@${c.insert ?? (c.kind === "file" ? c.path : c.name)}`;
     setText(`${before}${token} ${after}`);
     setMentions((ms) =>
       ms.some((m) => (m.kind === "file" && c.kind === "file" ? m.path === c.path : m.kind === "symbol" && c.kind === "symbol" && m.name === c.name))
@@ -150,7 +164,7 @@ export function Composer({
               >
                 {c.kind === "file" ? <FileText size={13} aria-hidden /> : <Braces size={13} aria-hidden className="text-info" />}
                 <span className="truncate font-mono text-secondary">{candidateLabel(c)}</span>
-                {c.kind === "symbol" ? <span className="ml-auto truncate font-mono text-meta text-faint">{c.path}</span> : null}
+                {c.detail || c.kind === "symbol" ? <span className="ml-auto truncate font-mono text-meta text-faint">{c.detail ?? (c.kind === "symbol" ? c.path : "")}</span> : null}
               </div>
             ))
           )}

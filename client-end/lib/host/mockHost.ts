@@ -386,6 +386,7 @@ export function createMockHost(): MockHost {
 
   return {
     kind: "mock",
+    capabilities: { editSettings: true, sessions: true, openInTrueForge: true },
     post,
     subscribe(l) {
       listeners.add(l);

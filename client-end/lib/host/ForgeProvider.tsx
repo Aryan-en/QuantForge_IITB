@@ -24,9 +24,11 @@ export type ForgeActions = {
   openInTrueForge(): void;
   openFile(path: string, line?: number): void;
   openDiff(proposalId: string): void;
+  runCommand(command: string): void;
+  queryMentions(query: string): void;
 };
 
-type ForgeContextValue = { state: ViewState; actions: ForgeActions; hostKind: Host["kind"] };
+type ForgeContextValue = { state: ViewState; actions: ForgeActions; hostKind: Host["kind"]; capabilities: Host["capabilities"] };
 
 const ForgeContext = createContext<ForgeContextValue | null>(null);
 
@@ -114,12 +116,14 @@ export function ForgeProvider({ host, children }: { host: Host; children: ReactN
       openInTrueForge: () => post(envelope("session.openInTrueForge", { sessionId: stateRef.current.app.activeSessionId })),
       openFile: (path, line) => post(envelope("file.open", { path, line })),
       openDiff: (proposalId) => post(envelope("diff.open", { proposalId })),
+      runCommand: (command) => post(envelope("command.run", { command })),
+      queryMentions: (query) => post(envelope("mention.query", { query })),
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `post` is a stable bind of `host`
     [host, cancelTurn],
   );
 
-  const value = useMemo(() => ({ state, actions, hostKind: host.kind }), [state, actions, host.kind]);
+  const value = useMemo(() => ({ state, actions, hostKind: host.kind, capabilities: host.capabilities }), [state, actions, host.kind, host.capabilities]);
   return <ForgeContext.Provider value={value}>{children}</ForgeContext.Provider>;
 }
 

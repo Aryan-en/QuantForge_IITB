@@ -32,7 +32,7 @@ const WIDE = 700;
  * Wide (≥ 700 px, editor-area panel): conversation left, Context/Plan/Review/Timeline right.
  */
 export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { mentionSource?: MentionCandidate[]; forceWelcome?: boolean; initialDraft?: string }) {
-  const { state, actions } = useForge();
+  const { state, actions, capabilities } = useForge();
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(rootRef);
   const wide = width >= WIDE;
@@ -116,17 +116,19 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
 
   const showWelcome = forceWelcome || (!state.ready ? false : app.connection.status !== "connected" || !app.model.primary) && state.conversation.length === 0;
 
-  const onErrorAction = (intent: string, id: string) => {
-    if (intent === "openModelConfig") setView("model");
-    else if (intent === "startTrueForge") actions.startTrueForge();
-    else if (intent === "retry") actions.checkConnection();
+  const onErrorAction = (action: NonNullable<(typeof state.errors)[number]["action"]>, id: string) => {
+    if (action.intent === "command" && action.command) actions.runCommand(action.command);
+    else if (action.intent === "openModelConfig") setView("model");
+    else if (action.intent === "startTrueForge") actions.startTrueForge();
+    else if (action.intent === "retry") actions.checkConnection();
     actions.dismissError(id);
   };
+  const openSettings = () => (capabilities.editSettings ? setView("settings") : actions.runCommand("forge.openSettings"));
 
   const banners = (
     <>
       {state.errors.map((e) => (
-        <ErrorBanner key={e.id} error={e} onAction={(i) => onErrorAction(i, e.id)} onDismiss={() => actions.dismissError(e.id)} />
+        <ErrorBanner key={e.id} error={e} onAction={(a) => onErrorAction(a, e.id)} onDismiss={() => actions.dismissError(e.id)} />
       ))}
       {state.retry ? <RetryBanner retry={state.retry} /> : null}
       <FallbackBanner model={app.model} />
@@ -162,6 +164,8 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
         running={running}
         cancelling={turn.status === "cancelling"}
         mentionSource={mentionSource}
+        remoteMentions={state.mentions.items}
+        onMentionQuery={actions.queryMentions}
         initialText={initialDraft}
         disabled={app.connection.status !== "connected"}
         disabledReason="Connect to TrueForge to start"
@@ -183,7 +187,7 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
       case "review":
         return <DiffReview queue={review} onHunk={actions.reviewHunk} onFile={actions.reviewFile} onBulk={actions.reviewBulk} onOpenDiff={actions.openDiff} compact={narrow} />;
       case "timeline":
-        return <ExecutionTimeline events={state.timeline} onOpenInTrueForge={actions.openInTrueForge} sessionId={app.activeSessionId} />;
+        return <ExecutionTimeline events={state.timeline} onOpenInTrueForge={capabilities.openInTrueForge ? actions.openInTrueForge : undefined} sessionId={app.activeSessionId} />;
     }
   };
 
@@ -194,7 +198,13 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
       </div>
 
       {view === "model" ? (
-        <ModelConfigPanel model={app.model} onBack={() => setView("main")} onTest={actions.testModel} onFallbacksChange={actions.setFallbacks} />
+        <ModelConfigPanel
+          model={app.model}
+          onBack={() => setView("main")}
+          onTest={actions.testModel}
+          onFallbacksChange={capabilities.editSettings ? actions.setFallbacks : undefined}
+          onOpenSettings={() => actions.runCommand("forge.openSettings")}
+        />
       ) : view === "settings" ? (
         <SettingsPanel settings={app.settings} onBack={() => setView("main")} onChange={actions.updateSettings} />
       ) : (
@@ -207,7 +217,7 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
             onSelectSession={actions.selectSession}
             onNewSession={actions.newSession}
             onOpenModel={() => setView("model")}
-            onOpenSettings={() => setView("settings")}
+            onOpenSettings={openSettings}
           />
           {showWelcome ? (
             <Welcome app={app} onStart={actions.startTrueForge} onCheck={actions.checkConnection} onNewSession={actions.newSession} onOpenModel={() => setView("model")} />

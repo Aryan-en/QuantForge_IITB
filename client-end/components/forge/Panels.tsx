@@ -13,6 +13,7 @@ import {
   Plus,
   RefreshCw,
   Server,
+  Settings2,
   ShieldCheck,
   Trash2,
   Wand2,
@@ -156,11 +157,14 @@ export function ModelConfigPanel({
   onBack,
   onTest,
   onFallbacksChange,
+  onOpenSettings,
 }: {
   model: ModelState;
   onBack: () => void;
   onTest: () => void;
-  onFallbacksChange: (f: string[]) => void;
+  /** Absent when fallbacks are edited in VS Code settings rather than here. */
+  onFallbacksChange?: (f: string[]) => void;
+  onOpenSettings: () => void;
 }) {
   const [draft, setDraft] = useState("");
   const fb = model.fallbacks;
@@ -169,7 +173,7 @@ export function ModelConfigPanel({
     if (j < 0 || j >= fb.length) return;
     const next = fb.slice();
     [next[i], next[j]] = [next[j], next[i]];
-    onFallbacksChange(next);
+    onFallbacksChange?.(next);
   };
   return (
     <PushedView title="Model configuration" onBack={onBack}>
@@ -187,8 +191,8 @@ export function ModelConfigPanel({
             <Button size="sm" variant="secondary" icon={RefreshCw} onClick={onTest} loading={model.status === "checking"}>
               Test connection
             </Button>
-            <Button size="sm" variant="ghost" icon={ExternalLink}>
-              Models in TrueForge
+            <Button size="sm" variant="ghost" icon={Settings2} onClick={onOpenSettings}>
+              Model settings
             </Button>
           </div>
         </Card>
@@ -200,18 +204,23 @@ export function ModelConfigPanel({
               <li key={f} className="flex items-center gap-1 rounded border border-border-subtle bg-bg px-2 py-1">
                 <span className="tabular w-4 text-meta text-faint">{i + 1}</span>
                 <span className="min-w-0 flex-1 truncate font-mono text-secondary text-fg">{f}</span>
-                <IconButton icon={ArrowUp} label={`Move ${f} up`} size="sm" disabled={i === 0} onClick={() => move(i, -1)} />
-                <IconButton icon={ArrowDown} label={`Move ${f} down`} size="sm" disabled={i === fb.length - 1} onClick={() => move(i, 1)} />
-                <IconButton icon={Trash2} label={`Remove ${f}`} size="sm" onClick={() => onFallbacksChange(fb.filter((x) => x !== f))} />
+                {onFallbacksChange ? (
+                  <>
+                    <IconButton icon={ArrowUp} label={`Move ${f} up`} size="sm" disabled={i === 0} onClick={() => move(i, -1)} />
+                    <IconButton icon={ArrowDown} label={`Move ${f} down`} size="sm" disabled={i === fb.length - 1} onClick={() => move(i, 1)} />
+                    <IconButton icon={Trash2} label={`Remove ${f}`} size="sm" onClick={() => onFallbacksChange(fb.filter((x) => x !== f))} />
+                  </>
+                ) : null}
               </li>
             ))}
           </ol>
+          {onFallbacksChange ? (
           <form
             className="mt-2 flex gap-1.5"
             onSubmit={(e) => {
               e.preventDefault();
               const v = draft.trim();
-              if (v && !fb.includes(v)) onFallbacksChange([...fb, v]);
+              if (v && !fb.includes(v)) onFallbacksChange?.([...fb, v]);
               setDraft("");
             }}
           >
@@ -229,6 +238,11 @@ export function ModelConfigPanel({
               Add
             </Button>
           </form>
+          ) : (
+            <Button size="sm" variant="secondary" icon={Settings2} className="mt-2" onClick={onOpenSettings}>
+              Edit in settings
+            </Button>
+          )}
         </Card>
 
         <Card title="Retry policy" icon={ShieldCheck}>

@@ -2,6 +2,7 @@
 import { build } from "esbuild";
 import { cpSync, mkdirSync, rmSync, existsSync, copyFileSync, chmodSync } from "node:fs";
 import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,4 +36,17 @@ chmodSync(rgDst, 0o755);
 copyFileSync(path.join(root, "LICENSE"), path.join(ext, "LICENSE"));
 if (existsSync(path.join(root, "THIRD_PARTY_NOTICES.md"))) copyFileSync(path.join(root, "THIRD_PARTY_NOTICES.md"), path.join(ext, "THIRD_PARTY_NOTICES.md"));
 cpSync(path.join(root, "agents"), path.join(ext, "agents"), { recursive: true });
+
+// React sidebar UI from client-end. Builds it when client-end's dependencies are installed; otherwise uses an
+// existing bundle; otherwise the extension falls back to its built-in page (see extension.ts).
+const ce = path.join(root, "client-end");
+if (existsSync(path.join(ce, "node_modules"))) {
+  execFileSync(process.execPath, [path.join(ce, "webview", "build.mjs"), "--production"], { cwd: ce, stdio: "inherit" });
+}
+if (existsSync(path.join(ce, "dist", "webview", "main.js"))) {
+  cpSync(path.join(ce, "dist", "webview"), path.join(ext, "dist", "webview"), { recursive: true, filter: (f) => !f.endsWith(".html") });
+  console.log("sidebar UI: client-end bundle copied to dist/webview");
+} else {
+  console.warn("sidebar UI: client-end bundle not found (run `npm install` in client-end); the extension will use its built-in page");
+}
 console.log("build complete →", path.relative(root, path.join(ext, "dist")));

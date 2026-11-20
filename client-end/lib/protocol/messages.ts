@@ -5,6 +5,7 @@ import type {
   ContextState,
   ConversationItem,
   ErrorCode,
+  MentionCandidate,
   ForgeSettings,
   Mention,
   ModelState,
@@ -38,7 +39,8 @@ export type HostToWebview =
   | Envelope<"model.status", { model: ModelState }>
   | Envelope<"error.notify", { error: UserFacingError }>
   | Envelope<"error.clear", { id?: string; code?: ErrorCode }>
-  | Envelope<"retry.scheduled", { attempt: number; maxAttempts: number; delayMs: number; code: ErrorCode; model: string }>
+  | Envelope<"retry.scheduled", { attempt: number; maxAttempts: number; delayMs: number; code: ErrorCode | string; model: string }>
+  | Envelope<"mention.results", { query: string; items: MentionCandidate[] }>
   | Envelope<"toast", { tone: "success" | "info" | "warning"; message: string; action?: { label: string; intent: "undo" } }>;
 
 export type HostMessageType = HostToWebview["type"];
@@ -62,7 +64,8 @@ export type WebviewToHost =
   | Envelope<"session.openInTrueForge", { sessionId: string | null }>
   | Envelope<"file.open", { path: string; line?: number }>
   | Envelope<"diff.open", { proposalId: string }>
-  | Envelope<"mention.query", { query: string }>;
+  | Envelope<"mention.query", { query: string }>
+  | Envelope<"command.run", { command: string }>;
 
 export type WebviewMessageType = WebviewToHost["type"];
 export type WebviewPayload<T extends WebviewMessageType> = Extract<WebviewToHost, { type: T }>["payload"];
@@ -89,6 +92,7 @@ const HOST_TYPES = [
   "error.clear",
   "retry.scheduled",
   "toast",
+  "mention.results",
 ] as const satisfies readonly HostMessageType[];
 
 const hostEnvelopeSchema = z

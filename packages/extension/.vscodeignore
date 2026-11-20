@@ -6,5 +6,6 @@
 !dist/extension.cjs
 !dist/wasm/**
 !dist/bin/**
+!dist/webview/**
 !LICENSE
 !THIRD_PARTY_NOTICES.md

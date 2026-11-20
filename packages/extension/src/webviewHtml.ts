@@ -71,3 +71,9 @@ function render(){const c=document.getElementById('conn');c.textContent=S.connec
 send({type:'ready'});
 </script></body></html>`;
 }
+
+/** Shell for the React UI built from client-end (dist/webview). Strict CSP: only our own script (nonce) and stylesheet. */
+export function renderAppHtml(webview: vscode.Webview, nonce: string, scriptUri: vscode.Uri, styleUri: vscode.Uri): string {
+  const csp = `default-src 'none'; img-src ${webview.cspSource} data:; style-src ${webview.cspSource}; font-src ${webview.cspSource}; script-src 'nonce-${nonce}';`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${csp}"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="${styleUri.toString()}"><title>FORGE</title></head><body><div id="root"></div><script nonce="${nonce}" src="${scriptUri.toString()}"></script></body></html>`;
+}

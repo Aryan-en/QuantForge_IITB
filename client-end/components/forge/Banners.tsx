@@ -15,17 +15,31 @@ export function ErrorBanner({
   onDismiss,
 }: {
   error: UserFacingError;
-  onAction: (intent: NonNullable<UserFacingError["action"]>["intent"]) => void;
+  onAction: (action: NonNullable<UserFacingError["action"]>) => void;
   onDismiss: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const tone = error.tone ?? "danger";
   return (
-    <div role="alert" className="forge-enter mx-2 mt-2 rounded-md border border-danger/40 border-l-2 border-l-danger bg-danger-soft px-3 py-2">
+    <div
+      role={tone === "info" ? "status" : "alert"}
+      className={cn(
+        "forge-enter mx-2 mt-2 rounded-md border border-l-2 px-3 py-2",
+        tone === "danger" && "border-danger/40 border-l-danger bg-danger-soft",
+        tone === "warning" && "border-warning/40 border-l-warning bg-warning-soft",
+        tone === "info" && "border-info/40 border-l-info bg-info-soft",
+      )}
+    >
       <div className="flex items-start gap-2">
-        <CircleAlert size={15} className="mt-px shrink-0 text-danger" aria-hidden />
+        {tone === "info" ? (
+          <Info size={15} className="mt-px shrink-0 text-info" aria-hidden />
+        ) : (
+          <CircleAlert size={15} className={cn("mt-px shrink-0", tone === "danger" ? "text-danger" : "text-warning")} aria-hidden />
+        )}
         <div className="min-w-0 flex-1">
           <p className="text-secondary font-semibold text-fg">
-            {error.title} <span className="ml-1 rounded-sm bg-bg/60 px-1 font-mono text-meta font-normal text-muted">{error.code}</span>
+            {error.title}
+            {error.code ? <span className="ml-1.5 rounded-sm bg-bg/60 px-1 font-mono text-meta font-normal text-muted">{error.code}</span> : null}
           </p>
           <p className="mt-0.5 text-secondary text-fg">{error.message}</p>
           {error.workspaceUnchanged ? (
@@ -35,7 +49,7 @@ export function ErrorBanner({
           ) : null}
           <div className="mt-2 flex flex-wrap items-center gap-1.5">
             {error.action ? (
-              <Button size="sm" variant="secondary" onClick={() => onAction(error.action!.intent)}>
+              <Button size="sm" variant="secondary" onClick={() => onAction(error.action!)}>
                 {error.action.label}
               </Button>
             ) : null}
