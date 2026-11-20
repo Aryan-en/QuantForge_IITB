@@ -113,7 +113,7 @@ export function taskBPolicy(req: ChatRequest, opts: { discover?: boolean } = {})
   const res = toolResults(req);
   const raw = res.length;
   if (opts.discover && raw === 1) return { type: "tool_calls", calls: [{ name: "create_sub_agent", args: { name: "discover-cli", input: `SUBAGENT-DISCOVERY: In this Flask repository find where built-in CLI commands (run, shell, routes) are defined and registered, the test module for the CLI, and the docs page that documents the built-in commands. Use ONLY get_context, search_workspace, find_symbol and read_file. Do NOT call propose_edit, submit_changes or run_terminal. Reply with file paths, line ranges and one line of why each matters.` } }] };
-  if (opts.discover && raw === 2) return { type: "tool_calls", calls: [{ name: "call_tool", args: { mcp_server: "forge-editor", tool_name: "get_file_structure", input: { path: "src/flask/cli.py" } } }] };
+  if (opts.discover && raw === 2) return { type: "tool_calls", calls: [{ name: "call_tool", args: { mcp_server: "forge-editor", tool_name: "get_git_status", input: {} } }] };
   const n = opts.discover && raw >= 3 ? raw - 2 : raw;
   const hash = (name: string, path: string): string | undefined => res.find((r) => r.name === name && r.json?.path === path)?.json?.contentHash;
   switch (n) {

@@ -179,9 +179,9 @@ describe.skipIf(!haveFixture)("Task B with TrueForge context-engineering feature
     expect(events.some((e) => e.type === "subagent.done" && (e as any).ok)).toBe(true);
     // the sub-agent ran its own read-only tool call through the same MCP server
     expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "search_workspace")).toBe(true);
-    // deferred tool loading: get_file_structure is not preloaded, yet it was reached through call_tool and executed by FORGE
+    // deferred tool loading: get_git_status is not preloaded, yet it was reached through call_tool and executed by FORGE
     expect(events.some((e) => e.type === "tool.call" && (e as any).call.tool === "call_tool")).toBe(true);
-    expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "get_file_structure")).toBe(true);
+    expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "get_git_status")).toBe(true);
     // the main agent never proposed from the sub-agent: result is the usual three files, applied only after approval
     const changed = gitStatus(s.ws).split("\n").filter(Boolean).map((l) => l.slice(3)).sort();
     expect(changed).toEqual(["docs/cli.rst", "src/flask/cli.py", "tests/test_cli.py"]);
