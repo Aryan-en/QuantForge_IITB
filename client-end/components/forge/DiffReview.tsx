@@ -296,13 +296,13 @@ export function HunkCard({ hunk, onHunk }: { hunk: Hunk; onHunk: DiffReviewProps
 
 export function DiffLines({ lines, className }: { lines: Hunk["lines"]; className?: string }) {
   return (
-    <div className={cn("forge-scroll overflow-x-auto", className)}>
+    <div tabIndex={0} role="region" aria-label="Diff hunk" className={cn("forge-scroll overflow-x-auto", className)}>
       <table className="w-full border-collapse font-mono text-secondary leading-[1.5]">
         <tbody>
           {lines.map((l, i) => (
             <tr key={i} className={l.kind === "add" ? "bg-diff-add-bg" : l.kind === "del" ? "bg-diff-del-bg" : undefined}>
-              <td className="tabular w-8 select-none pr-1 text-right align-top text-[11px] text-faint">{l.oldNo ?? ""}</td>
-              <td className="tabular w-8 select-none pr-1 text-right align-top text-[11px] text-faint">{l.newNo ?? ""}</td>
+              <td className="tabular w-8 select-none pr-1 text-right align-top text-[11px] text-muted">{l.oldNo ?? ""}</td>
+              <td className="tabular w-8 select-none pr-1 text-right align-top text-[11px] text-muted">{l.newNo ?? ""}</td>
               <td
                 aria-hidden
                 className={cn(
