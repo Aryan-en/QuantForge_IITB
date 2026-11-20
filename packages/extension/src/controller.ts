@@ -13,6 +13,7 @@ interface Notice2 { level: "error" | "warn" | "info"; title: string; message: st
 interface AppState {
   connection: "unknown" | "ok" | "down";
   model: string;
+  fallbacks: string[];
   running: boolean;
   sessionId: string | null;
   messages: { role: "user" | "assistant"; text: string }[];
@@ -39,7 +40,7 @@ export class ForgeController implements vscode.Disposable {
   private pending: { call: ToolCallInfo; resolve: (d: ApprovalDecision) => void } | null = null;
   private seq = 0;
   readonly lens: ReviewLensProvider;
-  readonly state: AppState = { connection: "unknown", model: "", running: false, sessionId: null, messages: [], stream: "", timeline: [], plan: [], context: null, review: null, approval: null, notice: null };
+  readonly state: AppState = { connection: "unknown", model: "", fallbacks: [], running: false, sessionId: null, messages: [], stream: "", timeline: [], plan: [], context: null, review: null, approval: null, notice: null };
   private inlineMode = false;
   private symbolDb: SqliteSymbolIndex | null = null;
   private watcher: vscode.FileSystemWatcher | null = null;
@@ -216,6 +217,7 @@ export class ForgeController implements vscode.Disposable {
   push(): void {
     if (this.tool) this.state.review = this.tool.review.view(this.state.approval?.tool === "submit_changes");
     this.state.model = cfg("model.primary", "");
+    this.state.fallbacks = cfg<string[]>("model.fallbacks", []);
     this.lens.refresh();
     this.post({ type: "state.snapshot", state: this.state });
   }
@@ -303,7 +305,8 @@ export class ForgeController implements vscode.Disposable {
   private async inlinePrompt(call: ToolCallInfo): Promise<void> {
     const first = this.tool.review.list()[0];
     const root = this.root();
-    if (first && root) await vscode.window.showTextDocument(vscode.Uri.joinPath(root, first.path), { preview: false });
+    // Render the proposal in the editor itself: native side-by-side diff (left pane is the real file, so the per-hunk CodeLens is there too).
+    if (first && root) await openDiff(this.tool.review, first.id, root);
     this.lens.refresh();
     const pick = await vscode.window.showInformationMessage(`FORGE proposes changes to ${this.tool.review.list().map((p) => p.path).join(", ")}. Use Accept/Reject above each hunk, then apply.`, "Accept all & apply", "Apply accepted", "Reject all");
     if (!this.pending || this.pending.call.callId !== call.callId) return;

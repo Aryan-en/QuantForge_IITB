@@ -12,7 +12,7 @@ import path from "node:path";
 import { startFakeModel, type FakeModelServer, type Policy } from "../../src/testing/fake-model.js";
 import { runTurn, runResilient, TrueForgeApi, type ForgeStreamEvent, type Notice } from "../../src/index.js";
 import { ensureTrueForge, cloneFlask, gitStatus, registerProvider, startRig, haveFixture, VENV_BIN, type TF, type ForgeRig } from "./harness.js";
-import { TASK_A, TASK_B, taskAPolicy, taskBPolicy } from "./policies.js";
+import { TASK_A, TASK_B, taskAPolicy, taskBPolicy, isSubagentRequest, subagentPolicy } from "./policies.js";
 
 let tf: TF;
 const cleanup: (() => Promise<void> | void)[] = [];
@@ -163,6 +163,29 @@ describe.skipIf(!haveFixture)("Task B — autonomous multi-file agent (scripted 
     expect(sawPendingState).toBe(true);
     expect(out.status).toBe("done");
     expect(gitStatus(s.ws)).toBe("");
+  }, 240_000);
+});
+
+describe.skipIf(!haveFixture)("Task B with TrueForge context-engineering features (rubric B4)", () => {
+  it("delegates discovery to a sub-agent and uses a deferred tool via call_tool, both visible as events, and still lands the same 3 reviewed files", async () => {
+    const s = await scenario((req) => (isSubagentRequest(req) ? subagentPolicy(req) : taskBPolicy(req, { discover: true })));
+    const events: ForgeStreamEvent[] = [];
+    const sessionId = await tf.api.createSession(await s.rig.specFor("forge-agent")(s.model));
+    const out = await runTurn(tf.api.sdk, { sessionId, text: TASK_B, onEvent: (e) => events.push(e), onApproval: humanApprover(s.rig, "accept-all", []) });
+    expect(out.status).toBe("done");
+    // sub-agent thread is visible to FORGE (and in TrueForge's Sessions page)
+    const start = events.find((e) => e.type === "subagent.start") as any;
+    expect(start?.title).toMatch(/discover-cli/);
+    expect(events.some((e) => e.type === "subagent.done" && (e as any).ok)).toBe(true);
+    // the sub-agent ran its own read-only tool call through the same MCP server
+    expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "search_workspace")).toBe(true);
+    // deferred tool loading: get_file_structure is not preloaded, yet it was reached through call_tool and executed by FORGE
+    expect(events.some((e) => e.type === "tool.call" && (e as any).call.tool === "call_tool")).toBe(true);
+    expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "get_file_structure")).toBe(true);
+    // the main agent never proposed from the sub-agent: result is the usual three files, applied only after approval
+    const changed = gitStatus(s.ws).split("\n").filter(Boolean).map((l) => l.slice(3)).sort();
+    expect(changed).toEqual(["docs/cli.rst", "src/flask/cli.py", "tests/test_cli.py"]);
+    expect(s.fake.requests.some((r) => isSubagentRequest(r))).toBe(true);
   }, 240_000);
 });
 

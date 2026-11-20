@@ -63,6 +63,8 @@ exports.run = async () => {
       const a = c.state.approval;
       if (!a || mid.handled || a.tool !== "submit_changes") return;
       mid.handled = true;
+      await sleep(600); // let the editor open the diff
+      mid.diffTabOpen = vscode.window.tabGroups.all.flatMap((g) => g.tabs).some((t) => t.input instanceof vscode.TabInputTextDiff);
       // What the developer would see while the turn is paused on the Review Gate:
       mid.diskUnchanged = fs.readFileSync(file, "utf8") === before;
       mid.bufferUnchanged = doc.getText() === before;
@@ -137,6 +139,7 @@ exports.run = async () => {
 
     ok("paused on review gate with queue intact", mid.handled && mid.queued && mid.queued.length === 1, JSON.stringify(mid.queued));
     ok("real file untouched while awaiting review", mid.diskUnchanged && mid.bufferUnchanged);
+    ok("native side-by-side diff opened automatically in the editor", mid.diffTabOpen);
     ok("CodeLens Accept/Reject offered for the hunk", mid.lensTitles && mid.lensTitles.includes("Accept") && mid.lensTitles.includes("Reject"), JSON.stringify(mid.lensTitles));
     ok("native diff content provider serves proposed text", mid.proposedViewHasChange);
     ok("sidebar state shows review queue", mid.reviewState === 1);

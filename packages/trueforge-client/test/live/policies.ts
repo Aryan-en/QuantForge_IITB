@@ -109,9 +109,12 @@ command. It prints the config as JSON. Values of any key containing \`\`SECRET\`
 `;
 
 /** Task B as a competent model would do it: discover → plan → three files → verify in shadow → submit. */
-export function taskBPolicy(req: ChatRequest): Reply {
+export function taskBPolicy(req: ChatRequest, opts: { discover?: boolean } = {}): Reply {
   const res = toolResults(req);
-  const n = res.length;
+  const raw = res.length;
+  if (opts.discover && raw === 1) return { type: "tool_calls", calls: [{ name: "create_sub_agent", args: { name: "discover-cli", input: `SUBAGENT-DISCOVERY: In this Flask repository find where built-in CLI commands (run, shell, routes) are defined and registered, the test module for the CLI, and the docs page that documents the built-in commands. Use ONLY get_context, search_workspace, find_symbol and read_file. Do NOT call propose_edit, submit_changes or run_terminal. Reply with file paths, line ranges and one line of why each matters.` } }] };
+  if (opts.discover && raw === 2) return { type: "tool_calls", calls: [{ name: "call_tool", args: { mcp_server: "forge-editor", tool_name: "get_file_structure", input: { path: "src/flask/cli.py" } } }] };
+  const n = opts.discover && raw >= 3 ? raw - 2 : raw;
   const hash = (name: string, path: string): string | undefined => res.find((r) => r.name === name && r.json?.path === path)?.json?.contentHash;
   switch (n) {
     case 0: return { type: "tool_calls", calls: [{ name: "get_context", args: { query: TASK_B, budgetTokens: 12000 } }] };
@@ -131,4 +134,15 @@ export function taskBPolicy(req: ChatRequest): Reply {
     case 9: return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "Add `flask config` (masked JSON), a test, and docs." } }] };
     default: return n < 5 ? { type: "tool_calls", calls: [{ name: "get_context", args: { query: "continue" } }] } : { type: "text", text: "Added the `flask config` built-in command (src/flask/cli.py), a test (tests/test_cli.py) and docs (docs/cli.rst). pytest tests/test_cli.py passes against the proposed edits." };
   }
+}
+
+/** Behaviour of the delegated sub-agent: read-only discovery, then a summary. Identified by the marker in its brief. */
+export function isSubagentRequest(req: ChatRequest): boolean {
+  return req.messages.some((m) => m.role === "user" && textOfContent(m).includes("SUBAGENT-DISCOVERY"));
+}
+const textOfContent = (m: { content?: unknown }): string => (typeof m.content === "string" ? m.content : Array.isArray(m.content) ? m.content.map((p: any) => p.text ?? "").join("") : "");
+export function subagentPolicy(req: ChatRequest): Reply {
+  const n = req.messages.filter((m) => m.role === "tool").length;
+  if (n === 0) return { type: "tool_calls", calls: [{ name: "search_workspace", args: { query: "add_command", maxResults: 10 } }] };
+  return { type: "text", text: "Built-in commands are registered in FlaskGroup.__init__ (src/flask/cli.py, ~L590-600; run_command, shell_command, routes_command). CLI tests: tests/test_cli.py (TestRoutes ~L446). Docs: docs/cli.rst ('Open a Shell' ~L133)." };
 }
