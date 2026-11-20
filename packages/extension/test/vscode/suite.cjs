@@ -118,6 +118,36 @@ exports.run = async () => {
       if (steps.some((x) => !x.pass)) throw new Error("failed: " + steps.filter((x) => !x.pass).map((x) => x.name).join("; "));
       return;
     }
+    if (scenario === "cancel") {
+      // User presses Stop while the agent is running a slow command. Measure what the developer actually experiences.
+      const marker = process.env.FORGE_TEST_MARKER;
+      const cp = require("child_process");
+      const count = () => Number(cp.execSync(`ps -ax -o command= | grep -c '${marker.replace(/^./, (ch) => `[${ch}]`)}' || true`).toString().trim() || "0");
+      const approver = setInterval(() => { const a = c.state.approval; if (a && a.tool === "run_terminal") c.decideApproval(a.callId, "allow"); }, 100);
+      void c.runTask("run the slow check", "agent");
+      const t0 = Date.now();
+      while (count() === 0 && Date.now() - t0 < 30000) await sleep(100);
+      ok("slow command is really running before Stop", count() > 0);
+      await sleep(500);
+      const tStop = Date.now();
+      c.cancel();
+      const cancellingShown = c.state.timeline.some((e) => e.title === "cancelling…"); // synchronous UI feedback
+      let tUi = null;
+      while (Date.now() - tStop < 15000) { if (!c.state.running) { tUi = Date.now() - tStop; break; } await sleep(10); }
+      clearInterval(approver);
+      clearInterval(lagTimer);
+      ok("UI shows 'cancelling…' synchronously (same tick as the click)", cancellingShown);
+      ok("run state returns to idle after Stop", tUi !== null, "idle after " + tUi + " ms");
+      ok("Stop → idle latency < 2000 ms", tUi !== null && tUi < 2000, tUi + " ms");
+      await sleep(500);
+      ok("child process tree killed (no orphan)", count() === 0, "orphans=" + count());
+      ok("cancel banner says nothing was written", c.state.notice && /Cancelled/.test(c.state.notice.title) && /Nothing was written/.test(c.state.notice.message), c.state.notice && c.state.notice.title);
+      ok("no proposals or writes left behind", c.review.list().length === 0 && fs.readFileSync(file, "utf8") === before);
+      ok("extension host stayed responsive during cancel (max stall < 250 ms)", maxGap < 250, "max stall " + maxGap + " ms");
+      fs.writeFileSync(out, JSON.stringify(steps, null, 1));
+      if (steps.some((x) => !x.pass)) throw new Error("failed: " + steps.filter((x) => !x.pass).map((x) => x.name).join("; "));
+      return;
+    }
     if (scenario === "error") {
       const t0 = Date.now();
       await c.runTask("Treat the values 'off' and 'n' as false as well, case-insensitively, and update the docstring to list every value that is treated as false.", "inline", header);

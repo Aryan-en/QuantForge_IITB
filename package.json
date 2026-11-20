@@ -14,18 +14,24 @@
     "forge:setup": "tsx scripts/setup-trueforge.mts",
     "test:live": "vitest run --config vitest.live.config.mts",
     "test:vscode": "tsx packages/extension/test/vscode/run.live.ts",
-    "package": "node scripts/build.mjs && cd packages/extension && npx --yes @vscode/vsce package --no-dependencies --skip-license --allow-missing-repository --target $(node -p \"process.platform+'-'+process.arch\") -o forge-$(node -p \"process.platform+'-'+process.arch\").vsix"
+    "package": "node scripts/build.mjs && cd packages/extension && npx --yes @vscode/vsce package --no-dependencies --target $(node -p \"process.platform+'-'+process.arch\") -o forge-$(node -p \"process.platform+'-'+process.arch\").vsix",
+    "preflight": "tsx scripts/preflight.mts",
+    "writeup": "scripts/build-writeup.sh",
+    "notices": "node scripts/notices.mjs"
   },
   "engines": {
     "node": ">=22.14"
   },
   "devDependencies": {
+    "@types/jsdom": "^30.0.0",
     "@types/node": "22.20.5",
     "@types/vscode": "1.90.0",
     "@vscode/test-electron": "^3.1.0",
     "esbuild": "0.28.2",
+    "jsdom": "^26.1.0",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vitest": "5.1.1"
-  }
+  },
+  "license": "MIT"
 }

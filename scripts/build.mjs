@@ -32,5 +32,7 @@ if (!existsSync(rgPath)) throw new Error(`ripgrep binary not found at ${rgPath}`
 const rgDst = path.join(ext, "dist/bin", process.platform === "win32" ? "rg.exe" : "rg");
 copyFileSync(rgPath, rgDst);
 chmodSync(rgDst, 0o755);
+copyFileSync(path.join(root, "LICENSE"), path.join(ext, "LICENSE"));
+if (existsSync(path.join(root, "THIRD_PARTY_NOTICES.md"))) copyFileSync(path.join(root, "THIRD_PARTY_NOTICES.md"), path.join(ext, "THIRD_PARTY_NOTICES.md"));
 cpSync(path.join(root, "agents"), path.join(ext, "agents"), { recursive: true });
 console.log("build complete →", path.relative(root, path.join(ext, "dist")));

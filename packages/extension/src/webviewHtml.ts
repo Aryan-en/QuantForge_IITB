@@ -1,4 +1,4 @@
-import * as vscode from "vscode";
+import type * as vscode from "vscode";
 
 /** Self-contained sidebar UI (no remote content, strict CSP). Presentational only: it sends validated intents to the host. */
 export function renderHtml(webview: vscode.Webview, nonce: string): string {
@@ -39,7 +39,7 @@ let picks=[],sel=0,atStart=-1,qTimer=null;const pk=document.getElementById('pick
 function closePick(){pk.hidden=true;picks=[];atStart=-1}
 function drawPick(){pk.hidden=!picks.length;pk.innerHTML=picks.map((p,i)=>'<div role="option" aria-selected="'+(i===sel)+'" data-i="'+i+'"><code>'+(p.kind==='symbol'?'ƒ ':'')+esc(p.label)+'</code> <span class="muted">'+esc(p.detail||'')+'</span></div>').join('');pk.querySelectorAll('div').forEach(d=>d.onmousedown=e=>{e.preventDefault();choose(+d.dataset.i)})}
 function choose(i){const p=picks[i];if(!p)return;const v=ta.value,end=ta.selectionStart;ta.value=v.slice(0,atStart)+'@'+p.insert+' '+v.slice(end);const pos=atStart+p.insert.length+2;ta.setSelectionRange(pos,pos);closePick();ta.focus()}
-ta.oninput=()=>{const upto=ta.value.slice(0,ta.selectionStart),m=/(?:^|\s)@([^\s@]*)$/.exec(upto);if(!m){closePick();return}atStart=upto.length-m[1].length-1;clearTimeout(qTimer);qTimer=setTimeout(()=>send({type:'mention.query',query:m[1]}),120)};
+ta.oninput=()=>{const upto=ta.value.slice(0,ta.selectionStart),m=/(?:^|\\s)@([^\\s@]*)$/.exec(upto);if(!m){closePick();return}atStart=upto.length-m[1].length-1;clearTimeout(qTimer);qTimer=setTimeout(()=>send({type:'mention.query',query:m[1]}),120)};
 window.addEventListener('message',e=>{if(e.data.type==='mention.results'&&atStart>=0){picks=e.data.items;sel=0;drawPick()}});
 document.getElementById('in').onkeydown=e=>{if(!pk.hidden&&picks.length){if(e.key==='ArrowDown'){e.preventDefault();sel=(sel+1)%picks.length;drawPick();return}if(e.key==='ArrowUp'){e.preventDefault();sel=(sel-1+picks.length)%picks.length;drawPick();return}if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();choose(sel);return}if(e.key==='Escape'){e.preventDefault();closePick();return}}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('send').click()}if(e.key==='Escape')send({type:'turn.cancel',sessionId:S.sessionId||'-'})};
 document.getElementById('stop').onclick=()=>send({type:'turn.cancel',sessionId:S.sessionId||'-'});

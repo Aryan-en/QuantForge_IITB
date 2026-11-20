@@ -15,11 +15,14 @@ if (!existsSync(VSCODE)) throw new Error(`VS Code not found at ${VSCODE} (set FO
 execSync("node scripts/build.mjs", { cwd: REPO, stdio: "inherit" });
 
 const tf = await ensureTrueForge();
-const scenarios = (process.env.FORGE_SCENARIOS ?? "taskA,fallback,error,resume").split(",");
+const scenarios = (process.env.FORGE_SCENARIOS ?? "taskA,fallback,error,resume,cancel").split(",");
 let allOk = true;
 for (const scenario of scenarios) {
   const ws = cloneFlask();
-  const fake = await startFakeModel((req) => taskAPolicy(req));
+  const marker = `forgecan${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const fake = await startFakeModel((req) => scenario === "cancel"
+    ? (req.messages.some((m) => m.role === "tool") ? { type: "text", text: "unreachable" } : { type: "tool_calls", calls: [{ name: "run_terminal", args: { command: `python3 -c "import time; time.sleep(60)  # ${marker}"`, timeoutMs: 100000, reason: "slow check" } }] })
+    : taskAPolicy(req));
   const rnd = Math.random().toString(36).slice(2, 7);
   const good = await registerProvider(tf, `vsg${rnd}`, fake.baseUrl);
   let primary = good;
@@ -55,7 +58,7 @@ for (const scenario of scenarios) {
       extensionDevelopmentPath: devPath,
       extensionTestsPath: path.join(REPO, "packages/extension/test/vscode/suite.cjs"),
       launchArgs: [ws, "--user-data-dir", path.join(profile, "data"), "--extensions-dir", path.join(profile, "ext"), ...extra, "--disable-workspace-trust", "--skip-welcome", "--skip-release-notes", "--disable-telemetry"],
-      extensionTestsEnv: { FORGE_TEST_OUT: outFile, FORGE_TEST_WS: ws, FORGE_TF_URL: tf.url, FORGE_TEST_MODEL: primary, FORGE_TEST_FALLBACK: fallback, FORGE_TEST_SCENARIO: sc, PATH: `${VENV_BIN}:${process.env.PATH}` },
+      extensionTestsEnv: { FORGE_TEST_OUT: outFile, FORGE_TEST_WS: ws, FORGE_TF_URL: tf.url, FORGE_TEST_MODEL: primary, FORGE_TEST_FALLBACK: fallback, FORGE_TEST_SCENARIO: sc, FORGE_TEST_MARKER: marker, PATH: `${VENV_BIN}:${process.env.PATH}` },
     });
   } catch (e) {
     if (!tolerateExit) { failed = true; console.error("VS Code run reported failure:", String(e).slice(0, 200)); }

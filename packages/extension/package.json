@@ -216,5 +216,10 @@
     "@forge/diff-engine": "*",
     "@forge/editor-mcp": "*",
     "@forge/trueforge-client": "*"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/REPLACE-WITH-OWNER/QuantForge_IITB"
   }
 }

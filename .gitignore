@@ -13,3 +13,6 @@ coverage/
 
 packages/extension/agents/
 packages/extension/dist/
+packages/extension/LICENSE
+packages/extension/THIRD_PARTY_NOTICES.md
+docs/writeup/*.pdf
