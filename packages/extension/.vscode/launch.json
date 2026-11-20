@@ -1,0 +1,12 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run FORGE (opens the Flask test repo)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": ["--extensionDevelopmentPath=${workspaceFolder}", "${workspaceFolder}/../../eval/work/flask"],
+      "outFiles": ["${workspaceFolder}/dist/**/*.cjs"]
+    }
+  ]
+}

@@ -3,7 +3,8 @@ import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { setRgPath, setWasmDir } from "@forge/context-engine";
 import { ForgeController } from "./controller.js";
-import { renderHtml } from "./webviewHtml.js";
+import { existsSync } from "node:fs";
+import { renderHtml, renderAppHtml } from "./webviewHtml.js";
 import { openDiff, PROPOSED_SCHEME, ProposedContentProvider } from "./reviewUi.js";
 
 export interface ForgeExports { controller: ForgeController }
@@ -26,8 +27,15 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeExpor
 
   const provider: vscode.WebviewViewProvider = {
     resolveWebviewView(view) {
-      view.webview.options = { enableScripts: true, localResourceRoots: [] };
-      view.webview.html = renderHtml(view.webview, randomBytes(16).toString("base64"));
+      // Prefer the React UI from client-end (bundled into dist/webview by scripts/build.mjs); fall back to the built-in page.
+      const appDir = vscode.Uri.joinPath(ctx.extensionUri, "dist", "webview");
+      const hasApp = existsSync(path.join(appDir.fsPath, "main.js")) && existsSync(path.join(appDir.fsPath, "main.css"));
+      const nonce = randomBytes(16).toString("base64");
+      view.webview.options = { enableScripts: true, localResourceRoots: hasApp ? [appDir] : [] };
+      view.webview.html = hasApp
+        ? renderAppHtml(view.webview, nonce, view.webview.asWebviewUri(vscode.Uri.joinPath(appDir, "main.js")), view.webview.asWebviewUri(vscode.Uri.joinPath(appDir, "main.css")))
+        : renderHtml(view.webview, nonce);
+      out.appendLine(hasApp ? "sidebar: React UI (dist/webview)" : "sidebar: built-in page (dist/webview not found)");
       controller.attach(view.webview);
     },
   };

@@ -189,4 +189,6 @@ The extension's real `EventNormalizer` must emit the same message shapes; the sc
 
 ## 13. Status (2026-11-20)
 
-F0–F8 implemented and exercised against the mock host in headless Chrome; F9 not started. Evidence and caveats live in [progress_tracker.md](progress_tracker.md) ("Frontend status"). Known gaps: not yet run inside real VS Code; no axe/Playwright suite committed; timeline not virtualised; light and high-contrast themes unchecked.
+F0–F9 done for the standalone UI: 7 Playwright checks pass (inline edit, agent mode, offline, fallback, cancel, axe in dark and light). Typecheck, lint and build are clean.
+
+**Not done: integration.** The extension on `main` does not load `client-end/dist/webview`; it renders its own simple page (`packages/extension/src/webviewHtml.ts`) and speaks a different wire format from `lib/protocol` (flat messages, a different state snapshot, no `reset`/`review.file`/`session.*` intents, `turn.cancel` requires a session id). Closing this needs an adapter between the two formats plus loading the bundle in the webview provider. Still unverified: behaviour inside real VS Code, themes beyond dark/light, widths below 360 px.

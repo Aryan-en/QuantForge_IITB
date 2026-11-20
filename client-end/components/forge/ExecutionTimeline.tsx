@@ -40,6 +40,8 @@ const KIND_ICON: Record<TimelineKind, LucideIcon> = {
   "model.retry": RefreshCw,
   "model.fallback": RefreshCw,
   "turn.done": CircleCheck,
+  "tool.result": Wrench,
+  error: CircleAlert,
 };
 
 type Filter = "all" | "tools" | "model" | "errors";
@@ -52,9 +54,9 @@ const FILTERS: { id: Filter; label: string }[] = [
 
 function matches(e: TimelineEvent, f: Filter): boolean {
   if (f === "all") return true;
-  if (f === "errors") return e.status === "error" || e.status === "warning";
+  if (f === "errors") return e.status === "error" || e.status === "warning" || e.kind === "error";
   if (f === "model") return e.kind === "model.call" || e.kind === "model.retry" || e.kind === "model.fallback" || e.kind === "context.compaction";
-  return e.kind === "tool.call" || e.kind === "tool.deferred_load" || e.kind === "test.run" || e.kind.startsWith("approval") || e.kind.startsWith("subagent");
+  return e.kind === "tool.call" || e.kind === "tool.result" || e.kind === "tool.deferred_load" || e.kind === "test.run" || e.kind.startsWith("approval") || e.kind.startsWith("subagent");
 }
 
 const DOT: Record<TimelineEvent["status"], string> = {
@@ -96,7 +98,7 @@ export function TimelineRow({ event, startAt }: { event: TimelineEvent; startAt:
   );
 }
 
-export function ExecutionTimeline({ events, onOpenInTrueForge, sessionId }: { events: TimelineEvent[]; onOpenInTrueForge: () => void; sessionId: string | null }) {
+export function ExecutionTimeline({ events, onOpenInTrueForge, sessionId }: { events: TimelineEvent[]; onOpenInTrueForge?: () => void; sessionId: string | null }) {
   const [filter, setFilter] = useState<Filter>("all");
   const [showAll, setShowAll] = useState(false);
   const visible = useMemo(() => events.filter((e) => matches(e, filter)), [events, filter]);
@@ -115,9 +117,11 @@ export function ExecutionTimeline({ events, onOpenInTrueForge, sessionId }: { ev
             session {sessionId ?? "—"}
           </span>
           <span className="tabular shrink-0 text-meta text-faint">· {toolCount} tool calls</span>
-          <Button size="sm" variant="ghost" icon={ExternalLink} className="ml-auto shrink-0" onClick={onOpenInTrueForge}>
-            Open in TrueForge
-          </Button>
+          {onOpenInTrueForge ? (
+            <Button size="sm" variant="ghost" icon={ExternalLink} className="ml-auto shrink-0" onClick={onOpenInTrueForge}>
+              Open in TrueForge
+            </Button>
+          ) : null}
         </div>
         <div role="radiogroup" aria-label="Filter events" className="flex gap-1">
           {FILTERS.map((f) => (

@@ -248,9 +248,24 @@ export class ForgeController implements vscode.Disposable {
         this.post({ type: "mention.results", query: m.query, items: items.map((i) => ({ kind: i.kind, label: i.label, insert: i.insert, ...(i.detail ? { detail: i.detail } : {}) })) });
         break;
       }
+      case "file.open": await this.openFile(m.path, m.line); break;
       case "command.run": await vscode.commands.executeCommand(m.command); break;
       case "settings.update": break; // settings live in VS Code settings (forge.*); the sidebar has no editable fields yet
     }
+  }
+
+  /** Open a workspace file from the sidebar (Context rows, plan chips). Paths outside the workspace are ignored. */
+  private async openFile(rel: string, line?: number): Promise<void> {
+    const root = this.root();
+    if (!root) return;
+    const target = vscode.Uri.joinPath(root, rel);
+    const inside = path.relative(root.fsPath, target.fsPath);
+    if (!inside || inside.startsWith("..") || path.isAbsolute(inside)) { this.log(`file.open refused (outside workspace): ${rel}`); return; }
+    try {
+      const doc = await vscode.workspace.openTextDocument(target);
+      const pos = new vscode.Position(Math.max(0, (line ?? 1) - 1), 0);
+      await vscode.window.showTextDocument(doc, { selection: new vscode.Range(pos, pos), preview: true });
+    } catch (e) { this.log(`file.open failed for ${rel}: ${String(e)}`); }
   }
 
   async bulk(action: "acceptAll" | "rejectAll" | "apply" | "undo"): Promise<void> {

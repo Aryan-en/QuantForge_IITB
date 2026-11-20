@@ -17,7 +17,7 @@ export type ModelState = {
   active: string | null;
   status: ModelStatus;
   lastCheckedAt?: number;
-  lastFailure?: { code: ErrorCode; action: "retried" | "fell_back" | "stopped"; at: number };
+  lastFailure?: { code: ErrorCode | string; action: "retried" | "fell_back" | "stopped"; at: number };
 };
 
 // ---------- errors (architecture §B.7 classification codes) ----------
@@ -34,11 +34,13 @@ export type ErrorCode =
 
 export type UserFacingError = {
   id: string;
-  code: ErrorCode;
+  /** Classification shown as a small code chip; omitted when the host has none. */
+  code?: ErrorCode | string;
+  tone?: "danger" | "warning" | "info";
   title: string;
   message: string;
-  /** What the user can do next. */
-  action?: { label: string; intent: "retry" | "openModelConfig" | "startTrueForge" | "dismiss" };
+  /** What the user can do next. `command` runs a host (VS Code) command. */
+  action?: { label: string; intent: "retry" | "openModelConfig" | "startTrueForge" | "dismiss" | "command"; command?: string };
   details?: string;
   workspaceUnchanged?: boolean;
 };
@@ -78,6 +80,11 @@ export type TurnState = {
 };
 
 // ---------- mentions ----------
+/** A suggestion for the @-picker. `insert` is the exact token the host expects after "@". */
+export type MentionCandidate =
+  | { kind: "file"; path: string; insert?: string; detail?: string }
+  | { kind: "symbol"; name: string; path: string; insert?: string; detail?: string };
+
 export type Mention =
   | { kind: "file"; path: Path; range?: Range }
   | { kind: "symbol"; name: string; path?: Path };
@@ -157,7 +164,7 @@ export type ContextItem = {
 
 export type ContextExclusion = {
   path: Path;
-  reason: "over budget" | "ignored by .gitignore" | "lockfile" | "denied: secret" | "binary" | "low score";
+  reason: string;
   tokens?: number;
 };
 
@@ -232,7 +239,9 @@ export type TimelineKind =
   | "test.run"
   | "model.retry"
   | "model.fallback"
-  | "turn.done";
+  | "turn.done"
+  | "tool.result"
+  | "error";
 
 export type TimelineEvent = {
   id: string;

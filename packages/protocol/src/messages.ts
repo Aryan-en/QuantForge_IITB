@@ -13,6 +13,7 @@ export const WebviewToHost = z.discriminatedUnion("type", [
   z.object({ ...Envelope, type: z.literal("review.bulk"), action: z.enum(["acceptAll", "rejectAll", "apply", "undo"]), batchId: z.string().optional() }).strict(),
   z.object({ ...Envelope, type: z.literal("mention.query"), query: z.string().max(200) }).strict(),
   z.object({ ...Envelope, type: z.literal("review.openDiff"), proposalId: z.string().min(1) }).strict(),
+  z.object({ ...Envelope, type: z.literal("file.open"), path: z.string().min(1).max(1024), line: z.number().int().min(1).optional() }).strict(),
   z.object({ ...Envelope, type: z.literal("command.run"), command: z.string().regex(/^forge\.[A-Za-z.]+$/) }).strict(),
   z.object({ ...Envelope, type: z.literal("settings.update"), patch: z.record(z.string(), z.unknown()) }).strict(),
 ]);

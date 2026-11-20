@@ -5,7 +5,7 @@
 FORGE is an AI software-engineering agent for Visual Studio Code. You describe a task in plain language; FORGE finds the relevant code in your repository, plans the change, edits several files, runs your tests, and shows every modification as a reviewable diff before anything touches disk. The agent loop runs on [TrueForge](https://github.com/truefoundry/trueforge) (TrueFoundry's open-source agent harness); FORGE is the editor-native client and tool provider.
 
 > ### Project status (2026-11-20)
-> The backend and VS Code extension are **built and verified with a scripted model**: 79 unit/integration tests, 11 live tests against **real TrueForge** and the **real Flask 3.1.3** repo, and 86 checks inside a **real VS Code** (Task A inline edit, automatic fallback, unreachable-endpoint error, resume across a real restart; `git status` clean afterwards). **No real LLM has been run against the three tasks yet**, the React UI in `client-end/` has **not** been built (that folder is deliberately untouched), and the repo has **no `LICENSE`** yet. Full evidence and gaps: [context/progress_tracker.md](context/progress_tracker.md).
+> The backend and VS Code extension are **built and verified with a scripted model**: 79 unit/integration tests, 11 live tests against **real TrueForge** and the **real Flask 3.1.3** repo, and 86 checks inside a **real VS Code** (Task A inline edit, automatic fallback, unreachable-endpoint error, resume across a real restart; `git status` clean afterwards). **No real LLM has been run against the three tasks yet**, the React UI in `client-end/` is built and tested on its own (7 Playwright + axe checks) but is **not yet loaded by the extension**, which still ships its simple built-in webview (`packages/extension/src/webviewHtml.ts`). Full evidence and gaps: [context/progress_tracker.md](context/progress_tracker.md).
 >
 > **Frontend location:** `/Users/aryansingh/Documents/QuantForge_IITB/client-end/`.
 >
@@ -246,7 +246,7 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 - TrueForge must be launched with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'`, otherwise it refuses FORGE's loopback tool server.
 - Python and TypeScript/JavaScript only; the shadow workspace re-copies the file list per command (fine for Flask; unmeasured at 10k+ files).
 - Flask 3.1.3's tests need `pytest < 9`.
-- Competition timing: Round 1 closes 20 Nov 2026 23:59 IST; video, write-up PDF and `LICENSE` are outstanding.
+- Competition timing: Round 1 closes 20 Nov 2026 23:59 IST; the demo video and the final write-up PDF are outstanding.
 
 ## 16. Contributing
 
@@ -259,7 +259,7 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 
 ## 17. Licence and Attribution
 
-- **FORGE licence:** **not yet chosen — there is no `LICENSE` file.** The competition requires a public repository under an open-source licence (FORGE-066, P0); this is the owner's decision. Until one is added the code has no granted licence. Third-party runtime dependencies are bundled under their own licences (TrueForge SDK MIT, MCP SDK, `@vscode/ripgrep`, `@vscode/tree-sitter-wasm` MIT, jsdiff, zod).
+- **FORGE licence:** MIT — see [LICENSE](LICENSE); bundled dependency licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - **Fork point:** **from scratch** — no upstream editor project (Cline, Continue, Roo Code, opencode, …) has been forked or copied. The frontend starts from the `create-next-app` template (Next.js and its dependencies are open-source; their licences ship inside `client-end/node_modules/*`). If code is ever reused from another project, this section must list the upstream repository URL and exact commit, preserve its licence, and describe the delta.
 - **TrueForge** is MIT-licensed (verified from its repository) and used as an external runtime/SDK dependency, not vendored.
 - **Flask** (`pallets/flask`) is used only as an external test fixture for the demo; it is cloned separately, not vendored, and keeps its own licence.

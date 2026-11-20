@@ -12,6 +12,7 @@ import type {
   ConversationItem,
   ErrorCode,
   HostToWebview,
+  MentionCandidate,
   HunkState,
   PlanStep,
   ReviewQueueState,
@@ -23,7 +24,7 @@ import type {
   UserFacingError,
 } from "@/lib/protocol";
 
-export type RetryInfo = { attempt: number; maxAttempts: number; delayMs: number; code: ErrorCode; model: string; scheduledAt: number };
+export type RetryInfo = { attempt: number; maxAttempts: number; delayMs: number; code: ErrorCode | string; model: string; scheduledAt: number };
 export type ToastInfo = { id: string; tone: "success" | "info" | "warning"; message: string; action?: { label: string; intent: "undo" } };
 
 export type ViewState = {
@@ -42,6 +43,8 @@ export type ViewState = {
   toast: ToastInfo | null;
   /** Turn ids whose late events must be ignored (architecture §E.6). */
   closedTurnIds: string[];
+  /** Latest @-mention suggestions from the host. */
+  mentions: { query: string; items: MentionCandidate[] };
 };
 
 export type LocalAction =
@@ -94,6 +97,7 @@ export const INITIAL_VIEW_STATE: ViewState = {
   retry: null,
   toast: null,
   closedTurnIds: [],
+  mentions: { query: "", items: [] },
 };
 
 // ---- turn state machine (architecture §E.2) ----
@@ -259,6 +263,9 @@ function applyHost(state: ViewState, msg: HostToWebview, at: number): ViewState 
 
     case "toast":
       return { ...state, toast: { id: msg.id, ...msg.payload } };
+
+    case "mention.results":
+      return { ...state, mentions: msg.payload };
   }
 }
 
