@@ -1,26 +1,48 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
+@import "../styles/forge.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/* Tailwind aliases over FORGE tokens (Ui-regitry §B.1 layer 3). Components use only these. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--forge-bg);
+  --color-surface: var(--forge-surface);
+  --color-raised: var(--forge-raised);
+  --color-overlay: var(--forge-overlay);
+  --color-border: var(--forge-border);
+  --color-border-subtle: var(--forge-border-subtle);
+  --color-fg: var(--forge-text);
+  --color-muted: var(--forge-text-muted);
+  --color-faint: var(--forge-text-faint);
+  --color-accent: var(--forge-accent);
+  --color-accent-hover: var(--forge-accent-hover);
+  --color-accent-fg: var(--forge-accent-fg);
+  --color-accent-soft: var(--forge-accent-soft);
+  --color-focus: var(--forge-focus);
+  --color-success: var(--forge-success);
+  --color-warning: var(--forge-warning);
+  --color-danger: var(--forge-danger);
+  --color-info: var(--forge-info);
+  --color-success-soft: var(--forge-success-soft);
+  --color-warning-soft: var(--forge-warning-soft);
+  --color-danger-soft: var(--forge-danger-soft);
+  --color-info-soft: var(--forge-info-soft);
+  --color-diff-add-bg: var(--forge-diff-add-bg);
+  --color-diff-add-fg: var(--forge-diff-add-fg);
+  --color-diff-del-bg: var(--forge-diff-del-bg);
+  --color-diff-del-fg: var(--forge-diff-del-fg);
+  --color-diff-chg-bg: var(--forge-diff-chg-bg);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  --font-sans: var(--forge-font-sans);
+  --font-mono: var(--forge-font-mono);
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  --shadow-sm: var(--forge-shadow-sm);
+  --shadow-md: var(--forge-shadow-md);
+  --shadow-lg: var(--forge-shadow-lg);
+
+  --text-meta: 11px;
+  --text-secondary: 12px;
+  --text-body: 13px;
+  --text-emph: 14px;
+  --text-section: 16px;
+  --text-title: 20px;
 }

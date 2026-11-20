@@ -1,0 +1,119 @@
+/* Base element styles and the few keyframes FORGE uses. Shared by harness and webview. */
+html,
+body {
+  background: var(--forge-bg);
+  color: var(--forge-text);
+  font-family: var(--forge-font-sans);
+  font-size: var(--forge-font-size);
+  line-height: 1.45;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--forge-focus);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--forge-accent) 35%, transparent);
+}
+
+.forge-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--forge-border) transparent;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Live caret at the end of streaming text: a single frame, no easing (Ui-regitry §B.6). */
+.forge-caret::after {
+  content: "▍";
+  color: var(--forge-accent);
+  margin-left: 1px;
+  animation: forge-blink 1s steps(1) infinite;
+}
+
+@keyframes forge-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Indeterminate 2px run rail under the header while a turn runs. */
+.forge-rail {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: var(--forge-border-subtle);
+}
+.forge-rail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, var(--forge-accent), transparent);
+  animation: forge-rail 1.4s var(--forge-ease) infinite;
+}
+@keyframes forge-rail {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(290%);
+  }
+}
+
+@keyframes forge-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.forge-enter {
+  animation: forge-enter var(--forge-dur-slow) var(--forge-ease) both;
+}
+
+@keyframes forge-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.forge-spin {
+  animation: forge-spin 0.9s linear infinite;
+}
+
+@keyframes forge-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.forge-pulse {
+  animation: forge-pulse 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .forge-caret::after,
+  .forge-rail::after,
+  .forge-enter,
+  .forge-spin,
+  .forge-pulse {
+    animation: none;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
