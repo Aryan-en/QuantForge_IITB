@@ -11,6 +11,7 @@ export const WebviewToHost = z.discriminatedUnion("type", [
   z.object({ ...Envelope, type: z.literal("approval.decide"), callId: z.string().min(1), decision: z.enum(["allow", "deny"]), reason: z.string().max(500).optional() }).strict(),
   z.object({ ...Envelope, type: z.literal("review.hunk"), proposalId: z.string(), hunkId: z.string(), action: z.enum(["accept", "reject"]) }).strict(),
   z.object({ ...Envelope, type: z.literal("review.bulk"), action: z.enum(["acceptAll", "rejectAll", "apply", "undo"]), batchId: z.string().optional() }).strict(),
+  z.object({ ...Envelope, type: z.literal("mention.query"), query: z.string().max(200) }).strict(),
   z.object({ ...Envelope, type: z.literal("review.openDiff"), proposalId: z.string().min(1) }).strict(),
   z.object({ ...Envelope, type: z.literal("command.run"), command: z.string().regex(/^forge\.[A-Za-z.]+$/) }).strict(),
   z.object({ ...Envelope, type: z.literal("settings.update"), patch: z.record(z.string(), z.unknown()) }).strict(),
@@ -71,6 +72,7 @@ export type HostToWebview =
   | { v: 1; id: string; type: "timeline.event"; event: TimelineEvent }
   | { v: 1; id: string; type: "stream.delta"; turnId: string; threadId: string; text: string }
   | { v: 1; id: string; type: "review.updated"; queue: ReviewQueueState }
+  | { v: 1; id: string; type: "mention.results"; query: string; items: { kind: "file" | "symbol"; label: string; insert: string; detail?: string }[] }
   | { v: 1; id: string; type: "error.notify"; error: UserFacingError };
 
 export function parseWebviewMessage(raw: unknown): { ok: true; msg: WebviewToHost } | { ok: false; error: string } {

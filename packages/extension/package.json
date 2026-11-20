@@ -111,6 +111,11 @@
         "command": "forge.openSettings",
         "title": "FORGE: Open Settings",
         "category": "FORGE"
+      },
+      {
+        "command": "forge.resume",
+        "title": "FORGE: Resume Interrupted Task",
+        "category": "FORGE"
       }
     ],
     "keybindings": [
@@ -196,6 +201,11 @@
           "type": "string",
           "default": "",
           "description": "Directory prepended to PATH for agent commands (e.g. a virtualenv's bin). A .venv/venv in the workspace is detected automatically."
+        },
+        "forge.index.persistent": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep a persistent SQLite (FTS5) symbol index in extension storage for fast startup and @symbol search. Falls back to on-demand parsing if unavailable."
         }
       }
     }

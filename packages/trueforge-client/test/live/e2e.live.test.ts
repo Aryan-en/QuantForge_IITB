@@ -284,3 +284,46 @@ function readToolOutput(requests: { messages: any[] }[], tool: string): string {
   return typeof m.content === "string" ? m.content : m.content.map((p: any) => p.text).join("");
 }
 void existsSync;
+
+describe.skipIf(!haveFixture)("Resume after window reload", () => {
+  it("drops the stream while paused on the Review Gate, then resumes the same turn: approval is re-asked once, change applies, finished turns replay without re-prompting", async () => {
+    const s = await scenario((req) => taskAPolicy(req));
+    const sessionId = await tf.api.createSession(await s.rig.specFor("forge-inline-edit")(s.model));
+
+    // ---- "window 1": start a turn and die while it is paused awaiting approval
+    const stream = (await tf.api.sdk.sessions.createTurnStream(sessionId, { input: [{ type: "user.message", content: TASK_A }] }, { maxRetries: 0 })) as AsyncIterable<any>;
+    let turnId = "";
+    for await (const ev of stream) {
+      if (ev.type === "turn.created") turnId = ev.turnId;
+      if (ev.type === "turn.update" && ev.state.status === "paused") break; // connection lost here
+    }
+    expect(turnId).not.toBe("");
+    expect(s.rig.ctx.review.list()).toHaveLength(1); // proposal queued, nothing written
+    expect(gitStatus(s.ws)).toBe("");
+
+    // ---- "window 2": the queue is restored from its snapshot, the turn is resumed from TrueForge's stored events
+    const snap = JSON.parse(JSON.stringify(s.rig.ctx.review.snapshot()));
+    s.rig.ctx.review.discardAll();
+    await s.rig.ctx.review.restore(snap);
+    const asked: string[] = [];
+    const events: ForgeStreamEvent[] = [];
+    const out = await runTurn(tf.api.sdk, { sessionId, text: "", resume: { turnId }, onEvent: (e) => events.push(e), onApproval: humanApprover(s.rig, "accept-all", asked) });
+    expect(out.status).toBe("done");
+    expect(out.turnId).toBe(turnId);
+    expect(asked).toEqual(["submit_changes"]); // exactly the one unanswered approval
+    expect(gitStatus(s.ws).trim()).toBe("M src/flask/helpers.py");
+    expect(readFileSync(path.join(s.ws, "src/flask/helpers.py"), "utf8")).toContain('"off", "n"');
+    expect(events.filter((e) => e.type === "tool.call")).toHaveLength(0); // history is not replayed to the UI
+    const res = events.find((e) => e.type === "tool.result") as any;
+    expect(res).toMatchObject({ tool: "submit_changes", ok: true }); // only the post-pause result is reported
+
+    // ---- resuming an already-finished turn must not re-prompt the model or re-ask approvals
+    const before = s.fake.requests.length;
+    const again = await runTurn(tf.api.sdk, { sessionId, text: "", resume: { turnId }, onApproval: async () => { throw new Error("must not be asked"); } });
+    expect(again.status).toBe("done");
+    expect(again.text).toBe(out.text);
+    expect(s.fake.requests.length).toBe(before);
+    expect((await s.rig.ctx.review.undo()).ok).toBe(true);
+    expect(gitStatus(s.ws)).toBe("");
+  }, 120_000);
+});

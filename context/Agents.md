@@ -106,7 +106,7 @@ For every meaningful change:
 
 **Report failures honestly.** Never claim tests passed without having run them in this session; paste the command and the outcome. If you could not run something, say so and why. Do not delete or weaken tests to make them pass.
 
-Commands that exist and were verified on 2026-11-20: `npm run typecheck` (6 packages, exit 0), `npm test` (59 passed), `npm run test:live` (10 passed; real TrueForge + Flask + scripted model), `npm run test:vscode` (42 checks in a real VS Code), `eval/run-fixed-tasks.sh` (all of the above). Scripted-model results prove plumbing only, never model quality; report real-model results separately. In `client-end/`: `npx tsc --noEmit` and `npm run lint` passed on the untouched starter.
+Commands that exist and were verified on 2026-11-20: `npm run typecheck` (6 packages, exit 0), `npm test` (79 passed incl. the eligibility guard), `npm run test:live` (11 passed; real TrueForge + Flask + scripted model), `npm run test:vscode` (86 checks in a real VS Code, 4 scenarios), `eval/run-fixed-tasks.sh` (all of the above). Scripted-model results prove plumbing only, never model quality; report real-model results separately. In `client-end/`: `npx tsc --noEmit` and `npm run lint` passed on the untouched starter.
 
 ---
 

@@ -12,8 +12,8 @@
 | Field | Value |
 |---|---|
 | Product | FORGE — editor-native coding agent for VS Code; agent loop on TrueForge |
-| Current phase | Phases 0–6, 8, 9 implemented and verified **with a scripted model**; Phase 7 largely done; Phase 10 (UI polish) and Phase 11–12 (video, write-up, packaging, licence) outstanding |
-| Overall completion | **≈ 60 %** (estimate: mean of milestone completion M0–M10 below; weighted equally) |
+| Current phase | Backend and extension feature-complete for the planned scope and verified **with a scripted model**; remaining: real-model validation, React UI (frozen), video, write-up, licence |
+| Overall completion | **≈ 80 %** of engineering scope (demo artefacts and real-model evidence are the rest) (estimate: mean of milestone completion M0–M10 below; weighted equally) |
 | Last updated | 2026-11-20 |
 | Product code | `packages/{protocol,diff-engine,context-engine,editor-mcp,trueforge-client,extension}`, `agents/`, `scripts/`, `eval/`, `config/` |
 
@@ -27,10 +27,21 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | B1 | **Round 1 deadline is 20 Nov 2026 23:59 IST** (competition PDF). Outstanding mandatory artefacts: demo video, write-up PDF, public repo with `LICENSE`. | Critical | Confirm date; record real-model runs; see [plan.md R14](plan.md#h-risk-register) |
 | B2 | No `LICENSE` file (open-source licence is required). Choosing one is the owner's decision. | Eligibility | Owner picks; FORGE-066 |
 | B3 | No real model has been exercised; behaviour with weaker/local models is unmeasured. | High | Configure ≥2 real models in TrueForge; run Tasks A–C; FORGE-073 |
-| B4 | Frontend (`client-end/`) is the unmodified Next.js starter by instruction; the registry's React UI is not built. The extension ships a compact vanilla-JS sidebar instead. | Medium (C1/UX) | Owner decision on when to build the React UI against `packages/protocol` |
+| B4 | Frontend (`client-end/`) is the unmodified Next.js starter by instruction; the registry's React UI is not built. The extension ships a vanilla-JS sidebar (tabs, approval card, `@` picker, review) instead. | Medium (C1/UX) | Owner decision on when to build the React UI against `packages/protocol` |
 | B5 | Nothing is committed from this phase (working tree only). | Low | Owner commits when satisfied |
 | ~~B6~~ | ~~Loopback MCP registration unverified~~ — **resolved** (needs `OUTBOUND_URL_ALLOWED_HOSTS`). | — | [architecture.md §K](architecture.md#k-implementation-notes-verified-findings) |
 | ~~B7~~ | ~~Commit `22d92470` ↔ tag `3.1.3` unverified~~ — **verified** (`release version 3.1.3`). | — | `eval/setup-flask.sh` asserts it |
+
+### Verification evidence (all run on 2026-11-20, macOS, Node v26.13.1, VS Code 1.146.0, TrueForge via `npx @truefoundry/trueforge@latest`)
+
+| Command | Result |
+|---|---|
+| `npx tsc -b packages/*` (strict, 6 packages) | exit 0 |
+| `npx vitest run` | **79 passed** (diff-engine 27, context-engine 26 incl. SQLite + Flask golden, editor-mcp 21, eligibility guard 5) |
+| `npm run test:live` (real TrueForge + real Flask + scripted model) | **11 passed**: Task A ×2, Task B ×2 (3 files, `56 passed` in shadow, masking via real CLI), cancel-and-reap, Task C ×5, **resume after dropped connection** |
+| `npm run test:vscode` (real VS Code 1.146.0, isolated profile) | **86 checks passed** across 4 scenarios: Task A inline, automatic fallback (401), unreachable endpoint error, **resume across a real VS Code quit/restart**; also `@` picker (files + Tree-sitter symbols), sidebar protocol validation, Tree-sitter self-check; `git status` empty after each; worst host stall 81–131 ms |
+| Installed `.vsix` (`FORGE_VSIX=… npm run test:vscode`) | Task A flow passes from `…/ext/forge-dev.forge-0.1.0` in a clean profile |
+| `eval/setup-flask.sh` asserts it |
 
 ### Verification evidence (all run on 2026-11-20, macOS, Node v26.13.1, VS Code 1.146.0, TrueForge via `npx @truefoundry/trueforge@latest`)
 
@@ -56,21 +67,21 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | VS Code extension foundation | COMPLETED | 100 % | P0 | Unassigned | Activates in real VS Code; commands, keybindings, settings, CSP webview (`test:vscode`) |
 | React webview | BLOCKED | 10 % | P0 | Unassigned | `client-end/` untouched by instruction; vanilla sidebar ships instead |
 | TrueForge integration | COMPLETED | 95 % | P0 | Unassigned | SDK client, event normaliser, approvals, probe, registration (live tests) |
-| Agent session management | IN PROGRESS | 60 % | P1 | Unassigned | Sessions/turns/retry/fallback work; **no persistence/resume after reload** |
+| Agent session management | COMPLETED | 95 % | P1 | Unassigned | Persist + resume after real VS Code restart, detach-not-cancel on close; only the active session is kept (no history list) |
 | MCP tool layer | COMPLETED | 100 % | P0 | Unassigned | 11 tools, loopback+bearer, 21 tests, verified through real TrueForge |
 | Inline editing | IN REVIEW | 85 % | P0 | Unassigned | Verified end-to-end in VS Code via `runTask`; input-box command path and keybinding not exercised; real-model run pending |
 | Autonomous agent mode | IN REVIEW | 80 % | P0 | Unassigned | Task B passes live with scripted model; real-model run pending |
-| Context engine | COMPLETED | 90 % | P0 | Unassigned | Ranking, budget invariant, tiers, reasons, exclusions; composer `@` autocomplete missing |
+| Context engine | COMPLETED | 98 % | P0 | Unassigned | Ranking, budget invariant, tiers, reasons, exclusions, `@` suggestions + sidebar picker |
 | Symbol retrieval | COMPLETED | 100 % | P0 | Unassigned | Tree-sitter Python/TS/JS; `find_symbol` |
 | Diff review | COMPLETED | 90 % | P0 | Unassigned | Hunks, review state, native diff, CodeLens, sidebar; added-line decorations absent |
 | Hunk acceptance/rejection | COMPLETED | 100 % | P0 | Unassigned | Per-hunk accept/reject verified in tests and VS Code |
-| Undo functionality | IN REVIEW | 90 % | P0 | Unassigned | Identity property test + VS Code undo; **crash-recovery reconciliation not implemented** |
-| Streaming | IN REVIEW | 75 % | P0 | Unassigned | Deltas forwarded to UI; no frame batching/virtualisation |
+| Undo functionality | COMPLETED | 98 % | P0 | Unassigned | Identity property test, VS Code undo, crash recovery before/during/after write |
+| Streaming | IN REVIEW | 85 % | P0 | Unassigned | Deltas coalesced ~16 ms; no list virtualisation |
 | Cancellation | IN REVIEW | 85 % | P0 | Unassigned | Live: process reaped, tree clean; UI latency target (<200 ms) not measured |
 | Model resilience | COMPLETED | 95 % | P0 | Unassigned | Classifier from real payloads, backoff, stall detection |
 | Automatic fallback | COMPLETED | 95 % | P0 | Unassigned | Verified live and in VS Code; fallback session carries a progress handoff only |
-| Repository intelligence | IN PROGRESS | 70 % | P1 | Unassigned | Import graph + test affinity done; SQLite FTS5 tier not started |
-| Testing | IN PROGRESS | 70 % | P0 | Unassigned | 59 + 10 + 42; **no CI**, no Playwright UI tests |
+| Repository intelligence | COMPLETED | 95 % | P1 | Unassigned | Import graph, test affinity, persistent SQLite FTS5 index with incremental updates |
+| Testing | IN PROGRESS | 85 % | P0 | Unassigned | 79 + 11 + 86; CI workflow written (not yet run on GitHub); no Playwright UI tests |
 | Documentation | IN REVIEW | 90 % | P0 | Unassigned | Updated to reality 2026-11-20 |
 | Competition demo | NOT STARTED | 0 % | P0 | Unassigned | No video, no write-up PDF, no real-model runs |
 
@@ -104,7 +115,7 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | Implementation | COMPLETED (engine) / IN PROGRESS (UI) |
 | Source | `packages/context-engine/src/*`, `get_context` tool, sidebar Context tab |
 | Tests | 17 unit incl. Flask golden (Task A/B top-k) and a hard budget invariant |
-| Remaining | `@` autocomplete in the composer; Context Inspector polish; recall measurement beyond two tasks |
+| Remaining | Context Inspector polish (React UI); recall measurement beyond the two fixed tasks |
 | Acceptance | Budget never exceeded (**met**, tested at 500…24000); Task B target files in top-10 (**met**: ranks 1, 3, 7); reasons visible (**met** in sidebar) |
 
 ### C.4 Diff Review and Safety — rubric B2 (10)
@@ -120,7 +131,7 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 |---|---|
 | Implementation | IN REVIEW |
 | Tests | live cancel test (process killed ≤ seconds, no orphans, tree clean, queue empty); MCP-level cancel + host-level cancel + timeout |
-| Remaining | UI latency measurement; frame batching; resume after reload |
+| Remaining | UI cancel-latency measurement; list virtualisation |
 | Acceptance | Workspace consistent after cancel (**met**); immediate UI (**unmeasured**) |
 
 ### C.6 Eligibility gate and resilience — rubric B3 (10)
@@ -149,13 +160,13 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | ID | Objective | Status | Completion | Remaining |
 |---|---|---|---|---|
 | M0 Setup | workspaces, spikes, fixture | COMPLETED* | 85 % | CI; `client-end` cleanup is out of scope by instruction (*all spikes S1–S4, S6 resolved; S5 optional) |
-| M1 TrueForge foundation | sessions/turns from extension | COMPLETED | 90 % | session persistence/resume |
+| M1 TrueForge foundation | sessions/turns from extension | COMPLETED | 100 % | — |
 | M2 MCP editor integration | tools reachable by agent | COMPLETED | 100 % | — |
 | M3 Inline editing | Task A | IN REVIEW | 75 % | real-model run; keybinding path test |
-| M4 Diff review and safety | hunk review, undo | COMPLETED | 85 % | crash recovery; added-line decorations |
+| M4 Diff review and safety | hunk review, undo | COMPLETED | 95 % | added-line editor decorations |
 | M5 Autonomous multi-file agent | Task B | IN REVIEW | 70 % | real-model run; richer approval/plan UI |
-| M6 Context intelligence | retrieval + inspector | IN REVIEW | 80 % | `@` autocomplete; SQLite tier |
-| M7 Streaming and cancellation | | IN REVIEW | 70 % | latency measurement; batching |
+| M6 Context intelligence | retrieval + inspector | COMPLETED | 92 % | richer inspector in the React UI |
+| M7 Streaming and cancellation | | IN REVIEW | 85 % | latency measurement |
 | M8 Resilience and fallback | Task C | COMPLETED | 90 % | real endpoint failure demo |
 | M9 UI polish and integration testing | registry parity | IN PROGRESS | 15 % | React UI (blocked on `client-end`), Playwright, a11y |
 | M10 Demonstration and submission | | NOT STARTED | 10 % | video, write-up, licence, public repo, real-model results |
@@ -169,13 +180,17 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | BUG-01 *(fixed)* | Cancel did not kill the child process: stateless MCP transport routed `notifications/cancelled` to a different server instance | High | `editor-mcp/src/server.ts` | in-flight map by JSON-RPC id + `CancelRegistry` + socket-close abort; test asserts no orphans | COMPLETED |
 | BUG-02 *(fixed)* | `rg` exit code 2 with `--no-messages` threw "invalid pattern" on harmless errors | Medium | `context-engine/src/rg.ts` | only treat parse errors as invalid | COMPLETED |
 | BUG-03 *(fixed)* | Generic term "test" boosted every test file via path match; CHANGES.rst outranked docs | Medium | `context-engine/src/assemble.ts` | generic-term list, changelog penalty, relevance floor | COMPLETED |
-| TD-01 | No session persistence/resume after reload | Medium | `controller.ts` | SessionManager (FORGE-019) | NOT STARTED |
-| TD-02 | Undo journal persists but is not reconciled after a crash mid-apply | Medium | `diff-engine/src/review.ts` | startup reconciliation | NOT STARTED |
+| TD-01 | Session persistence/resume after reload | Medium | `controller.ts`, `turn.ts` | persisted state + `runTurn({resume})` + stable MCP endpoint | COMPLETED |
+| TD-02 | Undo journal reconciliation after a crash mid-apply | Medium | `diff-engine/src/journal.ts` | intent/commit + `reconcile()` | COMPLETED |
 | TD-03 | Shadow copy re-syncs the whole file list per command (fast on Flask, untested on 10k+ files) | Low | `editor-mcp/src/shadow.ts` | incremental watcher | NOT STARTED |
 | TD-04 | Terminal policy cannot express `a && b`; agents must use `cwd` | Low | `policy.ts` | by design; documented in tool description | COMPLETED |
-| TD-05 | No CI; no guard against provider SDK imports (FORGE-015) | Medium | repo | GitHub Actions + lint rule | NOT STARTED |
+| TD-05 | CI and provider-import guard | Medium | `.github/workflows/ci.yml`, `guard.test.ts` | guard test fails on planted violation; workflow not yet run on GitHub | IN REVIEW |
 | TD-06 | `client-end` still template (page, metadata, Arial/Geist mismatch, `next/font/google`) | Low | `client-end/` | owner decision | BLOCKED |
 | TD-07 | Case-insensitive FS: `Readme.md` ≡ `README.md` | Low | root | `README.md` canonical | COMPLETED |
+| BUG-04 *(fixed)* | `tree-sitter.js` copied beside a `"type":"module"` package was loaded as ESM → `__filename` undefined → **symbol analysis silently empty inside the extension** | High | `scripts/build.mjs`, `parser.ts` | ship as `.cjs`; startup self-check warns if parsing is degraded | COMPLETED |
+| BUG-05 *(fixed)* | Closing the window cancelled the TrueForge turn (abort path called `sessions.cancel`) | High | `controller.ts`, `turn.ts` | separate `detach` signal | COMPLETED |
+| BUG-06 *(fixed)* | MCP endpoint port/token changed on restart, so a surviving turn lost its tools | High | `controller.ts` | persisted port + token (0600) | COMPLETED |
+| BUG-07 *(fixed)* | Half-built SQLite index answered `@symbol` searches | Medium | `suggest.ts`, `repo-index.ts` | answer only after complete warm-up (`warmDone`) | COMPLETED |
 | TD-08 | `fileParallelism:false` live tests need network the first time (`npx`) | Low | `harness.ts` | document | COMPLETED |
 
 ---
@@ -197,13 +212,10 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 
 ## G. Next Actions (prioritised)
 
-1. **Run Tasks A/B/C with real models** (≥2 distinct, one OpenAI-compatible/local if possible) through the extension; record pass/fail honestly, model names, where they ran, cost (FORGE-073). Tune `agents/*.instructions.md` only from observed failures.
-2. **Add a `LICENSE`** (owner's choice) and push the repo public (FORGE-066/075).
-3. **Record the ≤4-minute demo** (Tasks A → B → C, TrueForge session visible during B) (FORGE-074).
+1. **Run Tasks A/B/C with real models** (≥2, ideally one OpenAI-compatible/local) through the installed extension; record pass/fail honestly with model names, where they ran and cost (FORGE-073). Tune `agents/*.instructions.md` only from observed failures. This is the single largest unknown.
+2. **Add a `LICENSE`** (owner's choice), push the repo public, run the CI workflow once on GitHub (FORGE-066/075/008).
+3. **Record the ≤4-minute demo** (A → B → C; TrueForge Sessions page visible during B) (FORGE-074).
 4. **Write the 8-heading write-up PDF** with an accurate scorecard and limitations (FORGE-070).
-5. Add CI (typecheck, unit tests, provider-import guard) (FORGE-008/015).
-6. Session persistence and resume after reload (FORGE-019).
-7. Composer `@` autocomplete + richer Context Inspector (FORGE-042/047).
-8. Build the React UI from `Ui-regitry.md` in `client-end/` once the owner lifts the freeze (FORGE-013/014/037/039/055/057/058/059/061).
-9. Journal crash-recovery; added-line decorations (TD-02).
-10. VSIX packaging per platform (ripgrep binary), clean-machine README verification (FORGE-065/067).
+5. Build the React UI from `Ui-regitry.md` in `client-end/` once the freeze is lifted (FORGE-013/014/037/039/055/057/058/059/061).
+6. Per-platform VSIX builds (ripgrep binary), signed/published only if wanted (publishing is out of scope for the competition).
+7. Measure UI cancel latency; add list virtualisation for very long timelines.

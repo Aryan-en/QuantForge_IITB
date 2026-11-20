@@ -13,7 +13,8 @@
     "forge:serve": "tsx packages/editor-mcp/src/cli.ts",
     "forge:setup": "tsx scripts/setup-trueforge.mts",
     "test:live": "vitest run --config vitest.live.config.mts",
-    "test:vscode": "tsx packages/extension/test/vscode/run.live.ts"
+    "test:vscode": "tsx packages/extension/test/vscode/run.live.ts",
+    "package": "node scripts/build.mjs && cd packages/extension && npx --yes @vscode/vsce package --no-dependencies --skip-license --allow-missing-repository --target $(node -p \"process.platform+'-'+process.arch\") -o forge-$(node -p \"process.platform+'-'+process.arch\").vsix"
   },
   "engines": {
     "node": ">=22.14"

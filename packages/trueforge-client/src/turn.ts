@@ -33,6 +33,12 @@ export async function runTurn(client: TrueForge, o: RunTurnOptions): Promise<Tur
     // If TrueForge does not confirm in time, stop listening and report a local cancel.
     setTimeout(() => streamAbort.abort(), graceMs).unref?.();
   };
+  let detached = false;
+  const onDetach = (): void => {
+    detached = true;
+    streamAbort.abort();
+  };
+  o.detach?.addEventListener("abort", onDetach, { once: true });
   if (o.signal?.aborted) sendCancel();
   o.signal?.addEventListener("abort", sendCancel, { once: true });
 
@@ -64,7 +70,7 @@ export async function runTurn(client: TrueForge, o: RunTurnOptions): Promise<Tur
     }
     index.set(ev.id, ev);
     switch (ev.type) {
-      case "turn.created": turnId = ev.turnId; emit({ type: "turn.started", turnId }); break;
+      case "turn.created": turnId = ev.turnId; emit({ type: "turn.started", turnId, sessionId: o.sessionId }); break;
       case "mcp.initialize": emit({ type: "mcp.ready", servers: (ev.mcpServers ?? []).map((s: any) => s.name) }); break;
       case "model.message": announce(ev); break;
       case "tool.response": {
@@ -129,10 +135,46 @@ export async function runTurn(client: TrueForge, o: RunTurnOptions): Promise<Tur
     }
   };
 
+  /** Rebuild index/pending state from TrueForge's stored events when resuming (no events are emitted for history). */
+  const prime = async (): Promise<void> => {
+    turnId = o.resume!.turnId;
+    const answered = new Set<string>();
+    const events: Ev[] = [];
+    for await (const ev of (await client.sessions.listTurnEvents(o.sessionId, turnId)) as unknown as AsyncIterable<Ev>) events.push(ev);
+    for (const ev of events) {
+      lastId = ev.id ?? lastId;
+      index.set(ev.id, ev);
+      if (ev.type === "model.message") { announced.add(ev.id); for (const c of ev.toolCalls ?? []) toolNames.set(c.id, c.toolInfo?.name ?? c.function?.name ?? "?"); }
+      if (ev.type === "user.tool_approval" || ev.type === "tool.response") answered.add(String(ev.toolCallId));
+    }
+    for (const ev of events) {
+      if (ev.type === "tool.approval_required") {
+        const calls = (ev.toolCalls ?? []).filter((r: any) => !answered.has(r.id)).map((r: any) => {
+          const c = index.get(r.sourceEventId)?.toolCalls?.find((x: any) => x.id === r.id);
+          return { ...toCall(c ?? { id: r.id }, ev.threadId ?? "main"), sourceEventId: r.sourceEventId };
+        });
+        if (calls.length) pending.push({ threadId: ev.threadId ?? "main", calls });
+      }
+      if (ev.type === "turn.done") handle(ev);
+    }
+    emit({ type: "turn.started", turnId, sessionId: o.sessionId });
+  };
+
   try {
-    let stream: AsyncIterable<unknown> = (await client.sessions.createTurnStream(o.sessionId, { input: [{ type: "user.message", content: o.text }] }, { maxRetries: 0, abortSignal: streamAbort.signal, timeoutInSeconds: 3600 })) as AsyncIterable<unknown>;
+    let stream: AsyncIterable<unknown> | null = null;
+    let startPaused = false;
+    if (o.resume) {
+      await prime();
+      if (!outcome) {
+        if (pending.length) startPaused = true;
+        else stream = (await client.sessions.subscribeToTurn(o.sessionId, turnId, { afterEventId: lastId }, { abortSignal: streamAbort.signal, timeoutInSeconds: 3600, maxRetries: 0 })) as AsyncIterable<unknown>;
+      }
+    } else {
+      stream = (await client.sessions.createTurnStream(o.sessionId, { input: [{ type: "user.message", content: o.text }] }, { maxRetries: 0, abortSignal: streamAbort.signal, timeoutInSeconds: 3600 })) as AsyncIterable<unknown>;
+    }
     for (;;) {
-      const state = await consume(stream);
+      if (outcome) break;
+      const state = startPaused ? ((startPaused = false), "paused" as const) : await consume(stream!);
       if (state === "done") break;
       if (state === "ended") {
         if (cancelled) { outcome = { status: "cancelled", turnId, sessionId: o.sessionId, text: "", cancelReason: "client-cancelled" }; break; }
@@ -149,7 +191,8 @@ export async function runTurn(client: TrueForge, o: RunTurnOptions): Promise<Tur
       await client.sessions.createTurnEvents(o.sessionId, turnId, { events: decisions as never });
     }
   } catch (e) {
-    if (cancelled || streamAbort.signal.aborted) outcome = { status: "cancelled", turnId, sessionId: o.sessionId, text: "", cancelReason: "client-cancelled" };
+    if (detached) outcome = { status: "cancelled", turnId, sessionId: o.sessionId, text: "", cancelReason: "detached" };
+    else if (cancelled || streamAbort.signal.aborted) outcome = { status: "cancelled", turnId, sessionId: o.sessionId, text: "", cancelReason: "client-cancelled" };
     else if (e instanceof ForgeClientError && e.errorClass === "STALLED") {
       void client.sessions.cancel(o.sessionId).catch(() => undefined);
       outcome = { status: "error", turnId, sessionId: o.sessionId, text: "", errorMessage: e.message, errorClass: "STALLED" };
@@ -159,6 +202,7 @@ export async function runTurn(client: TrueForge, o: RunTurnOptions): Promise<Tur
     }
   } finally {
     o.signal?.removeEventListener("abort", sendCancel);
+    o.detach?.removeEventListener("abort", onDetach);
   }
   const final = outcome ?? { status: "error" as const, turnId, sessionId: o.sessionId, text: "", errorMessage: "turn ended without a result", errorClass: "UNKNOWN" as const };
   emit({ type: "turn.done", outcome: final });

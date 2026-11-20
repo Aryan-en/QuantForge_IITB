@@ -1,0 +1,8 @@
+**
+!package.json
+!README.md
+!media/**
+!agents/**
+!dist/extension.cjs
+!dist/wasm/**
+!dist/bin/**

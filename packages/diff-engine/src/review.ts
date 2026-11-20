@@ -38,6 +38,11 @@ export interface ProposeInput {
   turnId?: string | undefined;
 }
 
+export interface QueueSnapshot {
+  v: 1;
+  proposals: { id: string; path: string; kind: "modify" | "create" | "delete"; baseText: string | null; proposedText: string | null; rationale: string; turnId: string | undefined; fromCancelledTurn: boolean; states: Record<string, string> }[];
+}
+
 export interface ApplyReport {
   ok: boolean;
   batchId: string | null;
@@ -139,6 +144,28 @@ export class ReviewQueue {
     return { proposal };
   }
 
+  /** Serialisable snapshot so pending proposals survive a window reload. Hunks are recomputed on restore (ids are stable). */
+  snapshot(): QueueSnapshot {
+    return {
+      v: 1,
+      proposals: this.list().map((p) => ({ id: p.id, path: p.path, kind: p.kind, baseText: p.baseText, proposedText: p.proposedText, rationale: p.rationale, turnId: p.turnId, fromCancelledTurn: p.fromCancelledTurn, states: Object.fromEntries(p.states) })),
+    };
+  }
+  /** Replace the queue with a snapshot, then re-check every hunk against the current files. */
+  async restore(s: QueueSnapshot): Promise<void> {
+    this.proposals.clear();
+    if (s?.v !== 1) return;
+    for (const sp of s.proposals) {
+      const baseHash = sp.baseText === null ? null : contentHash(sp.baseText);
+      const hunks = sp.kind === "create" ? makeHunks(sp.path, "none", "", sp.proposedText ?? "") : sp.kind === "delete" ? makeHunks(sp.path, baseHash ?? "", sp.baseText ?? "", "") : makeHunks(sp.path, baseHash ?? "", sp.baseText ?? "", sp.proposedText ?? "");
+      this.proposals.set(sp.id, {
+        id: sp.id, path: sp.path, kind: sp.kind, baseText: sp.baseText, baseHash, proposedText: sp.proposedText, rationale: sp.rationale, hunks,
+        states: new Map(hunks.map((h) => [h.id, (sp.states[h.id] ?? "pending") as HunkState])), turnId: sp.turnId, fromCancelledTurn: sp.fromCancelledTurn,
+      });
+    }
+    await this.refresh();
+  }
+
   list(): Proposal[] {
     return [...this.proposals.values()];
   }
@@ -232,13 +259,15 @@ export class ReviewQueue {
     }
     if (changes.length === 0) return report;
 
+    const batchId = `b_${randomUUID().slice(0, 8)}`;
+    await this.journal.begin({ batchId, at: new Date().toISOString(), entries: journalEntries });
     const ok = await this.store.applyBatch(changes);
     if (!ok) {
+      await this.journal.remove(batchId);
       report.ok = false;
       return report;
     }
-    const batchId = `b_${randomUUID().slice(0, 8)}`;
-    await this.journal.record({ batchId, at: new Date().toISOString(), entries: journalEntries });
+    await this.journal.commit(batchId);
     for (const { p, ids } of willApply) {
       for (const id of ids) {
         p.states.set(id, "applied");
@@ -249,6 +278,11 @@ export class ReviewQueue {
     report.batchId = batchId;
     this.lastBatchId = batchId;
     return report;
+  }
+
+  /** Recover from a crash that happened while a batch was being applied. Call once at startup. */
+  async reconcile(): Promise<import("./journal.js").ReconcileReport> {
+    return this.journal.reconcile((p) => this.store.read(p), contentHash);
   }
 
   /** Revert a batch only if every touched file still equals what FORGE wrote (never clobbers later edits). */

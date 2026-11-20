@@ -243,3 +243,103 @@ describe("oldText replacement edits", () => {
     await expect(q.propose({ path: "a.py", edits: [{ oldText: "b", newText: "q" }, { range: { startLine: 1, endLine: 1 }, newText: "n" }], rationale: "r" })).rejects.toThrow(/mix/);
   });
 });
+
+describe("crash recovery of the undo journal", () => {
+  class CrashStore extends MemoryFileStore {
+    constructor(init: Record<string, string>, private readonly mode: "before" | "mid" | "after") { super(init); }
+    override async applyBatch(changes: { path: string; newText: string | null }[]): Promise<boolean> {
+      if (this.mode === "before") throw new Error("CRASH");
+      if (this.mode === "mid") {
+        const first = changes[0]!;
+        if (first.newText === null) this.files.delete(first.path); else this.files.set(first.path, first.newText);
+        throw new Error("CRASH");
+      }
+      await super.applyBatch(changes);
+      throw new Error("CRASH"); // died after writing, before the journal was committed
+    }
+  }
+  async function crashed(mode: "before" | "mid" | "after") {
+    const files = { "a.txt": lines(10), "b.txt": lines(10, "bee") };
+    const jstore = new MemoryJournalStore();
+    const store = new CrashStore(files, mode);
+    const j1 = new UndoJournal(jstore); await j1.init();
+    const q1 = new ReviewQueue(store, j1);
+    await q1.propose({ path: "a.txt", edits: [{ range: { startLine: 2, endLine: 2 }, newText: "A2" }], rationale: "r" });
+    await q1.propose({ path: "b.txt", edits: [{ range: { startLine: 3, endLine: 3 }, newText: "B3" }], rationale: "r" });
+    q1.decideAll("accept");
+    await expect(q1.apply()).rejects.toThrow("CRASH");
+    // "restart": fresh queue + journal over the same persisted journal and the same disk
+    const plain = new MemoryFileStore(Object.fromEntries(store.files));
+    const j2 = new UndoJournal(jstore); await j2.init();
+    expect(j2.hasPending()).toBe(true);
+    const q2 = new ReviewQueue(plain, j2);
+    return { files, plain, j2, q2, report: await q2.reconcile() };
+  }
+  it("crash BEFORE any write: intent dropped, nothing to undo, files pristine", async () => {
+    const { plain, j2, report, files } = await crashed("before");
+    expect(report.rolledBack).toHaveLength(1);
+    expect(j2.size()).toBe(0);
+    expect(j2.hasPending()).toBe(false);
+    expect(await plain.read("a.txt")).toBe(files["a.txt"]);
+  });
+  it("crash AFTER all writes but before commit: batch is recovered and undo restores everything", async () => {
+    const { plain, q2, report, files } = await crashed("after");
+    expect(report.committed).toHaveLength(1);
+    expect((await q2.undo()).ok).toBe(true);
+    expect(await plain.read("a.txt")).toBe(files["a.txt"]);
+    expect(await plain.read("b.txt")).toBe(files["b.txt"]);
+  });
+  it("crash MID-batch: only the files that changed are undoable; the rest is reported, nothing is rewritten", async () => {
+    const { plain, q2, report, files } = await crashed("mid");
+    expect(report.partial).toHaveLength(1);
+    expect(report.partial[0]!.applied).toHaveLength(1);
+    expect(report.partial[0]!.untouched).toHaveLength(1);
+    const changedPath = report.partial[0]!.applied[0]!;
+    const untouchedPath = report.partial[0]!.untouched[0]!;
+    expect(await plain.read(untouchedPath)).toBe(files[untouchedPath as "a.txt"]);
+    expect((await q2.undo()).ok).toBe(true);
+    expect(await plain.read(changedPath)).toBe(files[changedPath as "a.txt"]);
+  });
+  it("a file edited by the user after the crash is never clobbered by recovery or undo", async () => {
+    const { plain, q2, report } = await crashed("after");
+    expect(report.committed).toHaveLength(1);
+    plain.files.set("a.txt", "user rewrote this\n");
+    const u = await q2.undo();
+    expect(u.ok).toBe(false);
+    expect(await plain.read("a.txt")).toBe("user rewrote this\n");
+  });
+});
+
+describe("queue snapshot / restore (survives a window reload)", () => {
+  it("restores proposals, per-hunk decisions and still applies/undoes correctly", async () => {
+    const a = await setup({ "a.txt": lines(40), "b.txt": "x\n" });
+    const { proposal } = await a.q.propose({ path: "a.txt", edits: [{ range: { startLine: 3, endLine: 3 }, newText: "FIRST" }, { range: { startLine: 35, endLine: 35 }, newText: "SECOND" }], rationale: "r", turnId: "t9" });
+    await a.q.propose({ path: "new.txt", newContent: "hi\n", create: true, rationale: "r" });
+    a.q.decide(proposal.id, proposal.hunks[0]!.id, "accept");
+    a.q.decide(proposal.id, proposal.hunks[1]!.id, "reject");
+    const snap = JSON.parse(JSON.stringify(a.q.snapshot()));
+    const b = await setup(Object.fromEntries(a.store.files));
+    await b.q.restore(snap);
+    expect(b.q.list().map((p) => p.path).sort()).toEqual(["a.txt", "new.txt"]);
+    const restored = b.q.get(proposal.id)!;
+    expect(restored.states.get(proposal.hunks[0]!.id)).toBe("accepted");
+    expect(restored.states.get(proposal.hunks[1]!.id)).toBe("rejected");
+    expect(restored.turnId).toBe("t9");
+    b.q.decideAll("accept");
+    const rep = await b.q.apply();
+    expect(rep.filesChanged.sort()).toEqual(["a.txt", "new.txt"]);
+    expect((await b.q.undo()).ok).toBe(true);
+    expect(await b.store.read("a.txt")).toBe(lines(40));
+  });
+  it("hunks whose file changed while the window was closed come back stale/conflicted, never silently applied", async () => {
+    const a = await setup({ "a.txt": lines(10) });
+    await a.q.propose({ path: "a.txt", edits: [{ range: { startLine: 5, endLine: 5 }, newText: "AGENT" }], rationale: "r" });
+    const snap = a.q.snapshot();
+    const b = await setup({ "a.txt": lines(10).replace("line5", "USER") });
+    await b.q.restore(snap);
+    b.q.decideAll("accept");
+    const rep = await b.q.apply();
+    expect(rep.applied).toHaveLength(0);
+    expect(await b.store.read("a.txt")).toContain("USER");
+  });
+});

@@ -24,7 +24,9 @@ await build({ ...common, format: "esm", entryPoints: [path.join(root, "packages/
   banner: { js: 'import { createRequire as __cr } from "node:module"; const require = __cr(import.meta.url);' }, alias: {} });
 
 const wasmSrc = path.dirname(require.resolve("@vscode/tree-sitter-wasm"));
-for (const f of ["tree-sitter.js", "tree-sitter.wasm", "tree-sitter-python.wasm", "tree-sitter-typescript.wasm", "tree-sitter-tsx.wasm", "tree-sitter-javascript.wasm"]) copyFileSync(path.join(wasmSrc, f), path.join(ext, "dist/wasm", f));
+// tree-sitter.js is UMD and needs __filename: ship it as .cjs so a "type":"module" package.json cannot make Node load it as ESM.
+copyFileSync(path.join(wasmSrc, "tree-sitter.js"), path.join(ext, "dist/wasm/tree-sitter.cjs"));
+for (const f of ["tree-sitter.wasm", "tree-sitter-python.wasm", "tree-sitter-typescript.wasm", "tree-sitter-tsx.wasm", "tree-sitter-javascript.wasm"]) copyFileSync(path.join(wasmSrc, f), path.join(ext, "dist/wasm", f));
 const { rgPath } = require("@vscode/ripgrep");
 if (!existsSync(rgPath)) throw new Error(`ripgrep binary not found at ${rgPath}`);
 const rgDst = path.join(ext, "dist/bin", process.platform === "win32" ? "rg.exe" : "rg");

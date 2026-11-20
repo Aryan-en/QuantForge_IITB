@@ -33,7 +33,7 @@ const languages = new Map<Lang, unknown>();
 
 async function ensureInit(): Promise<TSModule> {
   if (!mod) {
-    mod = (wasmDirOverride ? createRequire(path.join(wasmDirOverride, "x.cjs"))("./tree-sitter.js") : createRequire(import.meta.url)("@vscode/tree-sitter-wasm")) as TSModule;
+    mod = (wasmDirOverride ? createRequire(path.join(wasmDirOverride, "x.cjs"))("./tree-sitter.cjs") : createRequire(import.meta.url)("@vscode/tree-sitter-wasm")) as TSModule;
   }
   initPromise ??= mod.Parser.init({ locateFile: (f: string) => path.join(wasmDir(), f) });
   await initPromise;
@@ -201,6 +201,12 @@ function tsImports(root: TSNode): ImportInfo[] {
   return out;
 }
 
+let lastParserError: string | null = null;
+/** Last parser failure (parsing degrades to "no symbols" instead of throwing, so surface why for diagnostics). */
+export function getLastParserError(): string | null {
+  return lastParserError;
+}
+
 export async function parseFile(rel: string, text: string, stat: { size: number; mtimeMs: number }): Promise<FileIndex> {
   const lang = langOf(rel);
   const lineCount = text === "" ? 0 : text.split("\n").length - (text.endsWith("\n") ? 1 : 0);
@@ -213,7 +219,8 @@ export async function parseFile(rel: string, text: string, stat: { size: number;
     const root = tree.rootNode;
     if (lang === "python") return { ...base, symbols: pySymbols(root, rel), imports: pyImports(root) };
     return { ...base, symbols: tsSymbols(root, rel), imports: tsImports(root) };
-  } catch {
+  } catch (e) {
+    lastParserError = e instanceof Error ? `${e.message}\n${(e.stack ?? "").split("\n").slice(1, 5).join("\n")}` : String(e);
     return base;
   }
 }

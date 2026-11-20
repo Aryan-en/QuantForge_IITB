@@ -1,9 +1,10 @@
 import * as vscode from "vscode";
 import path from "node:path";
 import { createHash, randomBytes } from "node:crypto";
-import { parseMentions } from "@forge/context-engine";
+import { promises as fsp } from "node:fs";
+import { getLastParserError, parseFile, parseMentions, SqliteSymbolIndex, suggestMentions } from "@forge/context-engine";
 import { createToolContext, startForgeMcpHttp, type ForgeEvent, type RunningServer, type ToolContext } from "@forge/editor-mcp";
-import { loadAgent, runResilient, TrueForgeApi, type AgentSpec, type ApprovalDecision, type ForgeStreamEvent, type Notice, type ToolCallInfo } from "@forge/trueforge-client";
+import { loadAgent, runResilient, runTurn, TrueForgeApi, type AgentSpec, type ApprovalDecision, type ForgeStreamEvent, type Notice, type ToolCallInfo } from "@forge/trueforge-client";
 import { parseWebviewMessage, type PlanStep, type ReviewQueueState, type TimelineEvent, type UserFacingError, type WebviewToHost } from "@forge/protocol";
 import { VsCodeFileStore } from "./vscodeStore.js";
 import { openDiff, ReviewLensProvider } from "./reviewUi.js";
@@ -24,6 +25,8 @@ interface AppState {
   notice: Notice2 | null;
 }
 
+interface Persisted { v: 1; sessionId: string | null; turnId: string | null; status: "running" | "done" | "cancelled" | "error" | "idle"; mode: "agent" | "inline"; messages: { role: "user" | "assistant"; text: string }[]; plan: PlanStep[]; queue: unknown }
+
 const cfg = <T>(k: string, d: T): T => vscode.workspace.getConfiguration("forge").get<T>(k, d);
 const ts = (): string => new Date().toISOString();
 
@@ -38,6 +41,14 @@ export class ForgeController implements vscode.Disposable {
   readonly lens: ReviewLensProvider;
   readonly state: AppState = { connection: "unknown", model: "", running: false, sessionId: null, messages: [], stream: "", timeline: [], plan: [], context: null, review: null, approval: null, notice: null };
   private inlineMode = false;
+  private symbolDb: SqliteSymbolIndex | null = null;
+  private watcher: vscode.FileSystemWatcher | null = null;
+  private deltaBuf = "";
+  private deltaTimer: NodeJS.Timeout | null = null;
+  private detach = new AbortController();
+  private disposed = false;
+  private storageFile = "";
+  private rec: Persisted = { v: 1, sessionId: null, turnId: null, status: "idle", mode: "agent", messages: [], plan: [], queue: null };
 
   constructor(private readonly ext: vscode.ExtensionContext, private readonly out: vscode.OutputChannel) {
     this.lens = new ReviewLensProvider({ list: () => this.tool?.review.list() ?? [] } as never, () => this.root());
@@ -73,10 +84,102 @@ export class ForgeController implements vscode.Disposable {
       onEvent: (e) => this.onToolEvent(e),
     });
     this.tool.turnId = () => String(this.seq);
+    // Self-check: parsing degrades to "no symbols" instead of throwing, so verify it works in THIS runtime and say so if not.
+    const probe = await parseFile("probe.py", "def f():\n    pass\n", { size: 1, mtimeMs: 1 });
+    if (probe.symbols.length === 0) {
+      this.log(`symbol analysis unavailable: ${getLastParserError() ?? "unknown"}`);
+      this.state.notice = { level: "warn", title: "Symbol analysis unavailable", message: "Code search still works, but symbol-aware ranking and find_symbol are degraded. See the FORGE output channel." };
+    }
+    // Optional persistent symbol index (SQLite FTS5 via node:sqlite) with incremental updates from a file watcher.
+    if (cfg("index.persistent", true)) {
+      this.symbolDb = SqliteSymbolIndex.open(path.join(storage, "symbols.sqlite"));
+      this.tool.index.attachStore(this.symbolDb);
+      this.log(this.symbolDb ? `persistent symbol index ready (${JSON.stringify(this.symbolDb.stats())})` : "persistent symbol index unavailable (node:sqlite/FTS5 missing); using on-demand parsing");
+      const rel = (u: vscode.Uri): string => vscode.workspace.asRelativePath(u, false);
+      this.watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(root, "**/*"));
+      const touch = (u: vscode.Uri): void => { this.tool.ws.invalidate(); this.tool.index.invalidate(rel(u)); };
+      this.watcher.onDidChange(touch); this.watcher.onDidCreate(touch);
+      this.watcher.onDidDelete((u) => { this.tool.ws.invalidate(); this.tool.index.remove(rel(u)); });
+      void this.tool.index.warm().then((n) => this.log(`indexed ${n} source files`)).catch(() => undefined);
+    }
+    this.storageFile = path.join(storage, "session.json");
+    await this.recoverAfterRestart();
     this.api = new TrueForgeApi(cfg("trueforge.baseUrl", "http://localhost:8790"));
-    this.srv = await startForgeMcpHttp(this.tool);
+    // Stable endpoint per workspace (persisted port + token, owner-only file) so a TrueForge turn that outlives this window can still reach us after a restart.
+    const mcpFile = path.join(storage, "mcp.json");
+    let saved: { port?: number; token?: string } = {};
+    try { saved = JSON.parse(await fsp.readFile(mcpFile, "utf8")) as typeof saved; } catch { /* first run */ }
+    const token = saved.token ?? randomBytes(24).toString("hex");
+    try { this.srv = await startForgeMcpHttp(this.tool, { port: saved.port ?? 0, token }); }
+    catch { this.srv = await startForgeMcpHttp(this.tool, { port: 0, token }); } // saved port taken by another process
+    await fsp.mkdir(storage, { recursive: true });
+    await fsp.writeFile(mcpFile, JSON.stringify({ port: this.srv.port, token }), { mode: 0o600 });
     this.log(`MCP server listening on ${this.srv.url}`);
     await this.checkConnection();
+  }
+
+  // ------------------------------------------------------------------ persistence / recovery
+  private async persist(patch: Partial<Persisted> = {}): Promise<void> {
+    if (!this.storageFile) return;
+    Object.assign(this.rec, patch, { messages: this.state.messages.slice(-50), plan: this.state.plan, queue: this.tool.review.snapshot() });
+    try {
+      await fsp.mkdir(path.dirname(this.storageFile), { recursive: true });
+      await fsp.writeFile(this.storageFile + ".tmp", JSON.stringify(this.rec), "utf8");
+      await fsp.rename(this.storageFile + ".tmp", this.storageFile);
+    } catch (e) { this.log(`persist failed: ${String(e)}`); }
+  }
+
+  /** On startup: finish any half-applied batch (crash recovery), restore the review queue and offer to resume a running turn. */
+  private async recoverAfterRestart(): Promise<void> {
+    const rep = await this.tool.review.reconcile();
+    if (rep.committed.length || rep.partial.length || rep.rolledBack.length) {
+      this.log(`journal reconcile: ${JSON.stringify(rep)}`);
+      if (rep.partial.length) void vscode.window.showWarningMessage(`FORGE was interrupted while applying changes. ${rep.partial.map((p) => `${p.applied.length} file(s) were written (undoable), ${p.untouched.length} untouched`).join("; ")}.`);
+      else if (rep.committed.length) void vscode.window.showInformationMessage("FORGE recovered an interrupted apply: the changes were written and can be undone.");
+    }
+    try {
+      const saved = JSON.parse(await fsp.readFile(this.storageFile, "utf8")) as Persisted;
+      if (saved?.v !== 1) return;
+      this.rec = saved;
+      this.state.messages = saved.messages ?? [];
+      this.state.plan = saved.plan ?? [];
+      this.state.sessionId = saved.sessionId;
+      if (saved.queue) await this.tool.review.restore(saved.queue as never);
+      this.tool.review.clearSettled();
+      if (saved.status === "running" && saved.sessionId && saved.turnId) {
+        void vscode.window.showInformationMessage("FORGE was working on a task when the window closed.", "Resume", "Discard").then(async (pick) => {
+          if (pick === "Resume") await this.resumeTask();
+          else if (pick === "Discard") { this.tool.review.discardAll(); await this.persist({ status: "idle", turnId: null }); this.push(); }
+        });
+      }
+    } catch { /* first run or unreadable: start clean */ }
+  }
+
+  /** Re-attach to the TrueForge turn that was running before the reload; unanswered approvals are asked again. */
+  async resumeTask(): Promise<void> {
+    if (!this.rec.sessionId || !this.rec.turnId || this.state.running) return;
+    await this.checkConnection();
+    if (this.state.connection !== "ok") return;
+    this.inlineMode = this.rec.mode === "inline";
+    this.abort = new AbortController();
+    Object.assign(this.state, { running: true, stream: "", notice: null });
+    void vscode.commands.executeCommand("setContext", "forge.running", true);
+    this.timeline({ kind: "session.start", title: "resumed after reload", status: "running" });
+    this.push();
+    try {
+      const out = await runTurn(this.api.sdk, { sessionId: this.rec.sessionId, text: "", resume: { turnId: this.rec.turnId }, signal: this.abort.signal, detach: this.detach.signal, stallTimeoutMs: cfg("stallTimeoutMs", 45000), onEvent: (e) => this.onStream(e), onApproval: (c) => this.approvalFor(c) });
+      if (out.status === "error") this.notice({ level: "error", title: "The resumed run failed", message: `${out.errorMessage ?? ""} Your files were not changed.` });
+      else if (out.status === "cancelled") this.notice({ level: "info", title: "Cancelled", message: "Nothing was written to your files." });
+      if (this.state.stream) { this.state.messages.push({ role: "assistant", text: this.state.stream }); this.state.stream = ""; }
+      if (this.disposed) return;
+      await this.persist({ status: out.status === "done" ? "done" : out.status });
+    } catch (e) {
+      this.notice({ level: "error", title: "Could not resume", message: String(e) });
+    } finally {
+      this.abort = null; this.pending = null; this.state.approval = null; this.inlineMode = false; this.state.running = false;
+      void vscode.commands.executeCommand("setContext", "forge.running", false);
+      this.push();
+    }
   }
 
   /** Probe TrueForge and (re)register FORGE's loopback MCP server in it. Never throws. */
@@ -133,10 +236,16 @@ export class ForgeController implements vscode.Disposable {
       case "approval.decide": this.decideApproval(m.callId, m.decision, m.reason); break;
       case "review.hunk": {
         this.tool.review.decide(m.proposalId, m.hunkId, m.action);
-        this.push(); break;
+        void this.persist(); this.push(); break;
       }
       case "review.bulk": await this.bulk(m.action); break;
       case "review.openDiff": { const root = this.root(); if (root) await openDiff(this.tool.review, m.proposalId, root); break; }
+      case "mention.query": {
+        if (!this.tool) break;
+        const items = await suggestMentions(this.tool.ws, this.tool.index, m.query, 10).catch(() => []);
+        this.post({ type: "mention.results", query: m.query, items: items.map((i) => ({ kind: i.kind, label: i.label, insert: i.insert, ...(i.detail ? { detail: i.detail } : {}) })) });
+        break;
+      }
       case "command.run": await vscode.commands.executeCommand(m.command); break;
       case "settings.update": break; // settings live in VS Code settings (forge.*); the sidebar has no editable fields yet
     }
@@ -155,6 +264,7 @@ export class ForgeController implements vscode.Disposable {
       if (!u.ok) void vscode.window.showWarningMessage(u.conflicts.length ? `Cannot undo: ${u.conflicts.join(", ")} changed since FORGE applied it.` : "Nothing to undo.");
       else vscode.window.setStatusBarMessage(`FORGE: restored ${u.restored.length} file(s)`, 5000);
     }
+    void this.persist();
     this.push();
   }
 
@@ -243,11 +353,12 @@ export class ForgeController implements vscode.Disposable {
 
     try {
       const res = await runResilient(this.api, {
-        text: prompt, models, specFor: (m) => specs.get(m)!, signal: this.abort.signal, stallTimeoutMs: cfg("stallTimeoutMs", 45000),
+        text: prompt, models, specFor: (m) => specs.get(m)!, signal: this.abort.signal, detach: this.detach.signal, stallTimeoutMs: cfg("stallTimeoutMs", 45000),
         onEvent: (e) => this.onStream(e), onNotice: (n) => this.onNotice(n), onApproval: (c) => this.approvalFor(c),
         describeProgress: () => { const q = this.tool.review.list(); return q.length ? `Edits already proposed (still queued): ${q.map((p) => p.path).join(", ")}. Do not re-propose them.` : "No edits were queued yet."; },
       });
       this.state.sessionId = res.sessionId;
+      if (this.disposed) return;
       if (res.outcome?.status === "cancelled") {
         this.tool.review.markTurnCancelled(String(this.seq));
         this.notice({ level: "info", title: "Cancelled", message: "Nothing was written to your files. Proposals made before you stopped (if any) are in Review and need your explicit decision." });
@@ -261,6 +372,7 @@ export class ForgeController implements vscode.Disposable {
     } finally {
       this.abort = null; this.pending = null; this.state.approval = null; this.inlineMode = false;
       this.state.running = false;
+      if (!this.disposed) void this.persist({ status: this.state.notice?.level === "error" ? "error" : "done" });
       void vscode.commands.executeCommand("setContext", "forge.running", false);
       // Safety net: a model may skip submit_changes. Leftover proposals still go through human review.
       const left = this.tool.review.list().filter((p) => [...p.states.values()].some((s) => s === "pending" || s === "accepted"));
@@ -270,8 +382,10 @@ export class ForgeController implements vscode.Disposable {
   }
 
   private onStream(e: ForgeStreamEvent): void {
+    if (e.type !== "text.delta") this.flushDelta();
     switch (e.type) {
-      case "text.delta": if (e.threadId === "main") { this.state.stream += e.text; this.post({ type: "stream.delta", turnId: String(this.seq), threadId: e.threadId, text: e.text }); } break;
+      case "turn.started": this.state.sessionId = e.sessionId; void this.persist({ sessionId: e.sessionId, turnId: e.turnId, status: "running", mode: this.inlineMode ? "inline" : "agent" }); break;
+      case "text.delta": if (e.threadId === "main") { this.state.stream += e.text; this.queueDelta(e.text); } break;
       case "message.complete": if (e.threadId === "main" && this.state.stream && !e.text) { /* tool-call-only message */ } break;
       case "tool.call": this.timeline({ kind: "tool.call", title: e.call.tool, detail: e.call.args.slice(0, 120), status: "running" }); if (this.state.stream) { this.state.messages.push({ role: "assistant", text: this.state.stream }); this.state.stream = ""; } this.push(); break;
       case "tool.result": this.timeline({ kind: "tool.result", title: e.tool ?? "tool", detail: e.preview.slice(0, 120), status: e.ok ? "ok" : "error" }); this.push(); break;
@@ -282,6 +396,20 @@ export class ForgeController implements vscode.Disposable {
     }
   }
 
+  /** Coalesce token deltas into ~one message per frame so a fast stream cannot flood the webview. */
+  private queueDelta(text: string): void {
+    this.deltaBuf += text;
+    this.deltaTimer ??= setTimeout(() => this.flushDelta(), 16);
+  }
+  private flushDelta(): void {
+    if (this.deltaTimer) clearTimeout(this.deltaTimer);
+    this.deltaTimer = null;
+    if (!this.deltaBuf) return;
+    const text = this.deltaBuf;
+    this.deltaBuf = "";
+    this.post({ type: "stream.delta", turnId: String(this.seq), threadId: "main", text });
+  }
+
   private onNotice(n: Notice): void {
     if (n.kind === "retry") { this.timeline({ kind: "retry", title: `retry ${n.attempt} in ${n.delayMs} ms`, detail: n.reason, status: "running" }); this.notice({ level: "warn", title: "Retrying", message: `${n.reason}. Attempt ${n.attempt + 1}.` }); }
     else if (n.kind === "fallback") { this.timeline({ kind: "fallback", title: `fallback → ${n.to}`, detail: n.reason, status: "ok" }); this.notice({ level: "warn", title: `Switched to fallback model ${n.to}`, message: `${n.from} failed: ${n.reason}. Continuing automatically; the fallback starts a fresh TrueForge session with a summary of progress.` }); }
@@ -289,14 +417,20 @@ export class ForgeController implements vscode.Disposable {
   }
 
   private onToolEvent(e: ForgeEvent): void {
+    if (e.type === "proposal") void this.persist();
     if (e.type === "context") this.state.context = { used: e.bundle.usedTokens, budget: e.bundle.budgetTokens, items: e.bundle.items.map((i) => ({ path: i.path, tier: i.tier, tokens: i.tokens, reasons: i.reasons })), excluded: e.bundle.excluded.slice(0, 40) };
     else if (e.type === "plan") this.state.plan = e.steps;
     this.push();
   }
 
   async dispose(): Promise<void> {
-    this.abort?.abort();
+    // Window closing / reloading: detach from the TrueForge turn but do NOT cancel it, so it can be resumed.
+    this.disposed = true;
+    this.detach.abort();
+    this.watcher?.dispose();
+    this.flushDelta();
     await this.srv?.close();
+    try { this.symbolDb?.close(); } catch { /* already closed */ }
   }
 }
 

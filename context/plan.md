@@ -119,7 +119,7 @@ Dependency order is strict: do not start a phase before its prerequisites meet t
 | S2 reachability | `GET /api/v1/capabilities` works as the probe; a dead server surfaces as a fetch/ECONNREFUSED error → `TRUEFORGE_UNREACHABLE`. |
 | S3 inline spec + registered server | Works: `sessions.create({agent:{spec:{…, mcp_servers:[{name:"forge-editor",…}]}}})`. |
 | S4 failure payloads | `turn.done` with `state.status:"error"`, `message:"[Model Error] Request failed (401): …"` or `"[Model Error] Cannot connect to API: …"`. TrueForge itself retries 429 (3 upstream calls) but not 500. |
-| S5 SQLite binding | Not run (optional tier). |
+| S5 SQLite binding | **Resolved**: Node's built-in `node:sqlite` with FTS5 works in Node 26 *and* inside VS Code 1.146's extension host (Node 24.22 / Electron 43) — no native addon to rebuild. Implemented as the optional Tier-1 index. |
 | S6 shadow workspace on Flask | Works with an editable install: `pytest tests/test_cli.py` inside the shadow reports **56 passed** (55 baseline + the new test), which is impossible if it had imported the real tree. |
 | Tree-sitter packaging | `web-tree-sitter` 0.27 + `tree-sitter-wasms` are **incompatible** (dylink format). Switched to Microsoft's matched `@vscode/tree-sitter-wasm`. |
 | Fixture gotcha | Flask 3.1.3's tests import `notset` from pytest internals; **pytest < 9** is required. |
@@ -258,21 +258,21 @@ Status values: NOT STARTED · IN PROGRESS · BLOCKED · IN REVIEW · COMPLETED. 
 | FORGE-002 | Spike S1: register loopback MCP server with local TrueForge; call a trivial tool | P0 | — | Written outcome in `docs/spikes.md`; agent session shows the tool call | COMPLETED |
 | FORGE-003 | Spike S2: reachability endpoint + SDK behavior when TrueForge is down | P0 | — | Probe function spec + captured error shape | COMPLETED |
 | FORGE-004 | Spike S3/S4: inline spec referencing registered MCP server; capture `turn.done` error payloads (bad key, unreachable endpoint) | P0 | FORGE-002 | Fixtures saved under `packages/trueforge-client/test/fixtures` | COMPLETED |
-| FORGE-005 | Spike S5: SQLite binding for FTS5 in extension host | P2 | FORGE-001 | Decision recorded; optional | NOT STARTED |
+| FORGE-005 | Spike S5: SQLite binding for FTS5 in extension host | P2 | FORGE-001 | Decision recorded; optional | COMPLETED |
 | FORGE-006 | Spike S6: shadow workspace on Flask 3.1.3 (`pytest tests/test_cli.py -q` runs against shadow edits) | P0 | FORGE-009 | Proposed change visible to pytest in shadow; real tree untouched | COMPLETED |
 | FORGE-007 | Clean `client-end` template (page, metadata, fonts) and confirm ADR-009 layout | P1 | FORGE-001 | No template content remains; harness page builds | BLOCKED |
-| FORGE-008 | CI workflow (typecheck, lint, unit tests, build) | P1 | FORGE-001 | Green on PR | NOT STARTED |
+| FORGE-008 | CI workflow (typecheck, lint, unit tests, build) | P1 | FORGE-001 | Green on PR | IN REVIEW |
 | FORGE-009 | Flask fixture: clone pallets/flask at tag 3.1.3 (commit `22d92470`), create venv, record baseline `pytest tests/test_cli.py -q` | P0 | — | Baseline result and commit hash recorded in `eval/README` | COMPLETED |
 | FORGE-010 | `packages/protocol` zod schemas (webview messages, tool IO, `TimelineEvent`) | P0 | FORGE-001 | Round-trip tests; unknown types rejected | COMPLETED |
 | FORGE-011 | Extension scaffold: activation, commands, keybindings, settings contribution | P0 | FORGE-010 | Dev Host activates; commands listed | COMPLETED |
 | FORGE-012 | Webview provider + CSP + bridge | P0 | FORGE-010, FORGE-011 | Ping/pong; no remote requests | COMPLETED |
 | FORGE-013 | `client-end/webview` esbuild entry + `tokens.css` + primitives | P0 | FORGE-007, FORGE-012 | Webview renders in Dev Host with VS Code theme vars | BLOCKED |
 | FORGE-014 | Welcome screen (Ui-regitry §D.1) | P1 | FORGE-013 | Matches registry states: connected / unreachable / no model | NOT STARTED |
-| FORGE-015 | Guardrail: lint/CI check forbidding model-provider SDKs and hostnames in `packages/extension` and `packages/editor-mcp` | P0 | FORGE-001 | CI fails on `openai`, `@anthropic-ai/sdk`, `@google/genai` imports or provider URLs | NOT STARTED |
+| FORGE-015 | Guardrail: lint/CI check forbidding model-provider SDKs and hostnames in `packages/extension` and `packages/editor-mcp` | P0 | FORGE-001 | CI fails on `openai`, `@anthropic-ai/sdk`, `@google/genai` imports or provider URLs | COMPLETED |
 | FORGE-016 | `trueforge-client` wrapper (connect, sessions, turns, cancel, resume) | P0 | FORGE-003, FORGE-010 | Streams a reply from local TrueForge | COMPLETED |
 | FORGE-017 | `EventNormalizer` → `TimelineEvent` | P0 | FORGE-016 | Fixture-driven tests for all documented event types | COMPLETED |
 | FORGE-018 | Agent definitions + instructions in `agents/`; loader | P0 | FORGE-004 | Files exist, validated against spec fields; session created from them | COMPLETED |
-| FORGE-019 | `SessionManager` persistence/resume across reload | P1 | FORGE-016 | Reload mid-turn resumes via `subscribeToTurn` | NOT STARTED |
+| FORGE-019 | `SessionManager` persistence/resume across reload | P1 | FORGE-016 | Reload mid-turn resumes via `subscribeToTurn` | COMPLETED |
 | FORGE-020 | `forge.startTrueForge` + probe + model status | P1 | FORGE-003 | Status reflects Connected/Unreachable | COMPLETED |
 | FORGE-021 | MCP server skeleton (Streamable HTTP, loopback, bearer, Origin check) | P0 | FORGE-002 | Rejects missing/invalid token and browser origins | COMPLETED |
 | FORGE-022 | `resolveWorkspacePath` + deny lists + Workspace Trust gate | P0 | FORGE-021 | Traversal/symlink/NUL tests pass | COMPLETED |
@@ -288,22 +288,22 @@ Status values: NOT STARTED · IN PROGRESS · BLOCKED · IN REVIEW · COMPLETED. 
 | FORGE-032 | Inline diff UI: decorations, CodeLens, `forge-proposed:` provider | P0 | FORGE-030 | Per-hunk accept/reject in editor | IN REVIEW |
 | FORGE-033 | **Task A pass** on Flask 3.1.3 | P0 | FORGE-027, FORGE-031, FORGE-032 | `FLASK_DEBUG=off python -c "from flask.helpers import get_debug_flag; print(get_debug_flag())"` prints `False` after accept | IN REVIEW |
 | FORGE-034 | Apply engine: 3-way merge + `WorkspaceEdit` batch | P0 | FORGE-030 | Conflicts never overwrite | COMPLETED |
-| FORGE-035 | Undo journal in extension storage + crash recovery | P0 | FORGE-034 | apply∘undo identity (property test) | IN REVIEW |
+| FORGE-035 | Undo journal in extension storage + crash recovery | P0 | FORGE-034 | apply∘undo identity (property test) | COMPLETED |
 | FORGE-036 | Stale/concurrent modification detection | P0 | FORGE-034 | Edit during pending review → `stale` | COMPLETED |
 | FORGE-037 | Diff Review UI (file list, hunks, accept/reject/all, undo, summaries) | P0 | FORGE-034, FORGE-013 | Registry parity; keyboard operable | NOT STARTED |
 | FORGE-038 | Shadow Workspace + shadow-aware `read_file` | P0 | FORGE-006, FORGE-027 | Tests run on proposed code; real tree untouched | COMPLETED |
 | FORGE-039 | Agent workspace UI: composer, stream, timeline, approval card, cancel | P0 | FORGE-017, FORGE-013 | Registry parity | IN PROGRESS |
 | FORGE-040 | Plan Viewer | P1 | FORGE-029, FORGE-039 | Steps reflect `update_plan` | IN PROGRESS |
 | FORGE-041 | **Task B pass** on Flask 3.1.3 | P0 | FORGE-038, FORGE-039, FORGE-037 | ≥3 files changed; `pytest tests/test_cli.py -q` passes; demo app masks secrets | IN REVIEW |
-| FORGE-042 | Context core: mention parser, ripgrep wrapper, composer autocomplete | P0 | FORGE-024 | `@file`/`@symbol` resolve; errors visible | IN PROGRESS |
+| FORGE-042 | Context core: mention parser, ripgrep wrapper, composer autocomplete | P0 | FORGE-024 | `@file`/`@symbol` resolve; errors visible | COMPLETED |
 | FORGE-043 | `web-tree-sitter` Python + TS/JS symbols and imports | P0 | FORGE-042 | Symbols for Flask modules extracted | COMPLETED |
 | FORGE-044 | Import graph + test-affinity | P1 | FORGE-043 | Neighbors computed to depth 2 | COMPLETED |
 | FORGE-045 | Scorer + token budgeter + tier ladder + compression | P0 | FORGE-043 | Budget never exceeded (property test) | COMPLETED |
 | FORGE-046 | `get_context` tool | P0 | FORGE-045 | Returns items, reasons, exclusions | COMPLETED |
 | FORGE-047 | Context Inspector UI | P1 | FORGE-046, FORGE-013 | Shows selected/excluded/reasons/budget | IN PROGRESS |
 | FORGE-048 | Context eval harness (recall@10 on Tasks A/B) | P1 | FORGE-046, FORGE-009 | Report generated | IN REVIEW |
-| FORGE-049 | Optional SQLite FTS5 index | P2 | FORGE-005, FORGE-043 | Incremental update < 500 ms | NOT STARTED |
-| FORGE-050 | Streaming pipeline: delta batching, virtualized timeline | P0 | FORGE-039 | Smooth under 10k deltas | IN PROGRESS |
+| FORGE-049 | Optional SQLite FTS5 index | P2 | FORGE-005, FORGE-043 | Incremental update < 500 ms | COMPLETED |
+| FORGE-050 | Streaming pipeline: delta batching, virtualized timeline | P0 | FORGE-039 | Smooth under 10k deltas | COMPLETED |
 | FORGE-051 | Cancellation end-to-end (UI, `sessions.cancel`, AbortSignals, late-event guard) | P0 | FORGE-028, FORGE-039 | Matrix of cancel points tested | IN REVIEW |
 | FORGE-052 | Error classifier from real payloads | P0 | FORGE-004 | Table-driven tests | COMPLETED |
 | FORGE-053 | Retry/backoff with jitter; stall detector | P0 | FORGE-052 | Deterministic fake-timer tests | COMPLETED |
@@ -318,7 +318,7 @@ Status values: NOT STARTED · IN PROGRESS · BLOCKED · IN REVIEW · COMPLETED. 
 | FORGE-062 | `eval/run-fixed-tasks.sh` (Tasks A–C, repeatable) | P0 | FORGE-033, FORGE-041, FORGE-056 | Outputs pass/fail + session ids | COMPLETED |
 | FORGE-063 | Performance validation vs. NFR targets | P1 | FORGE-050 | Report | NOT STARTED |
 | FORGE-064 | Demo script, recording, evidence bundle | P0 | FORGE-062 | `docs/demo.md` | NOT STARTED |
-| FORGE-065 | VSIX packaging + `.vscodeignore` | P1 | FORGE-060 | Installs in clean profile | NOT STARTED |
+| FORGE-065 | VSIX packaging + `.vscodeignore` | P1 | FORGE-060 | Installs in clean profile | COMPLETED |
 | FORGE-066 | Choose and add an open-source `LICENSE` (rule 7); attribution for upstream deps; CHANGELOG | **P0** | — | `LICENSE` present at root; README §17 matches | NOT STARTED |
 | FORGE-067 | README clean-machine verification | P0 | FORGE-065 | Steps run verbatim | NOT STARTED |
 | FORGE-068 | `config/forge.example.json` (+ documented TrueForge model setup, no secrets) | P0 | FORGE-016 | Example works when keys are filled via TrueForge; secret scan clean | COMPLETED |

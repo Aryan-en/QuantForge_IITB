@@ -21,11 +21,13 @@ button:focus-visible,textarea:focus-visible{outline:2px solid var(--vscode-focus
 button:disabled{opacity:.5;cursor:not-allowed}
 pre{margin:4px 0;white-space:pre-wrap;word-break:break-word;font:12px var(--vscode-editor-font-family)}
 .add{background:rgba(63,185,80,.16)}.del{background:rgba(248,81,73,.16)}.muted{opacity:.7}
+#pick{position:absolute;bottom:64px;left:8px;right:8px;max-height:180px;overflow:auto;background:var(--vscode-quickInput-background,#1f242c);border:1px solid var(--b);border-radius:6px;z-index:5}#pick div{padding:4px 8px;cursor:pointer}#pick div[aria-selected=true]{background:var(--vscode-list-activeSelectionBackground)}
 footer{border-top:1px solid var(--b);padding:8px;display:flex;gap:6px}textarea{flex:1;resize:none;background:var(--vscode-input-background);color:var(--vscode-input-foreground);border:1px solid var(--b);border-radius:4px;padding:6px;font:inherit}
 </style></head><body>
 <header><strong>FORGE</strong><span id="conn" class="chip">checking…</span><span id="model" class="chip muted"></span></header>
 <nav role="tablist"><button role="tab" data-t="agent" aria-selected="true">Agent</button><button role="tab" data-t="context" aria-selected="false">Context</button><button role="tab" data-t="plan" aria-selected="false">Plan</button><button role="tab" data-t="review" aria-selected="false">Review</button><button role="tab" data-t="timeline" aria-selected="false">Timeline</button></nav>
 <div id="banner"></div><main id="main" aria-live="polite"></main>
+<div id="pick" role="listbox" hidden></div>
 <footer><textarea id="in" rows="3" aria-label="Describe a task. Type @ to mention files or symbols" placeholder="Describe a task. Use @path/to/file.py or @symbol:Name to mention code."></textarea><div><button class="p" id="send">Send</button><button class="s" id="stop" hidden>Stop</button></div></footer>
 <script nonce="${nonce}">
 const vs=acquireVsCodeApi();let S={},tab='agent',n=0;const id=()=>String(++n);
@@ -33,7 +35,13 @@ const send=m=>vs.postMessage({v:1,id:id(),...m});
 const esc=s=>String(s??'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{tab=b.dataset.t;document.querySelectorAll('nav button').forEach(x=>x.setAttribute('aria-selected',String(x===b)));render()});
 document.getElementById('send').onclick=()=>{const t=document.getElementById('in');const v=t.value.trim();if(!v)return;send({type:'task.submit',text:v,mentions:[]});t.value=''};
-document.getElementById('in').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('send').click()}if(e.key==='Escape')send({type:'turn.cancel',sessionId:S.sessionId||'-'})};
+let picks=[],sel=0,atStart=-1,qTimer=null;const pk=document.getElementById('pick'),ta=document.getElementById('in');
+function closePick(){pk.hidden=true;picks=[];atStart=-1}
+function drawPick(){pk.hidden=!picks.length;pk.innerHTML=picks.map((p,i)=>'<div role="option" aria-selected="'+(i===sel)+'" data-i="'+i+'"><code>'+(p.kind==='symbol'?'ƒ ':'')+esc(p.label)+'</code> <span class="muted">'+esc(p.detail||'')+'</span></div>').join('');pk.querySelectorAll('div').forEach(d=>d.onmousedown=e=>{e.preventDefault();choose(+d.dataset.i)})}
+function choose(i){const p=picks[i];if(!p)return;const v=ta.value,end=ta.selectionStart;ta.value=v.slice(0,atStart)+'@'+p.insert+' '+v.slice(end);const pos=atStart+p.insert.length+2;ta.setSelectionRange(pos,pos);closePick();ta.focus()}
+ta.oninput=()=>{const upto=ta.value.slice(0,ta.selectionStart),m=/(?:^|\s)@([^\s@]*)$/.exec(upto);if(!m){closePick();return}atStart=upto.length-m[1].length-1;clearTimeout(qTimer);qTimer=setTimeout(()=>send({type:'mention.query',query:m[1]}),120)};
+window.addEventListener('message',e=>{if(e.data.type==='mention.results'&&atStart>=0){picks=e.data.items;sel=0;drawPick()}});
+document.getElementById('in').onkeydown=e=>{if(!pk.hidden&&picks.length){if(e.key==='ArrowDown'){e.preventDefault();sel=(sel+1)%picks.length;drawPick();return}if(e.key==='ArrowUp'){e.preventDefault();sel=(sel-1+picks.length)%picks.length;drawPick();return}if(e.key==='Enter'||e.key==='Tab'){e.preventDefault();choose(sel);return}if(e.key==='Escape'){e.preventDefault();closePick();return}}if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();document.getElementById('send').click()}if(e.key==='Escape')send({type:'turn.cancel',sessionId:S.sessionId||'-'})};
 document.getElementById('stop').onclick=()=>send({type:'turn.cancel',sessionId:S.sessionId||'-'});
 window.addEventListener('message',e=>{const m=e.data;if(m.type==='state.snapshot'){S=m.state;render()}else if(m.type==='stream.delta'){S.stream=(S.stream||'')+m.text;if(tab==='agent')render()}});
 function review(){const q=S.review;if(!q||!q.proposals.length)return'<p class="muted">Nothing to review.</p>';

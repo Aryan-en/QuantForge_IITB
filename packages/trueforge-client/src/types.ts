@@ -11,7 +11,7 @@ export interface ToolCallInfo {
 
 /** TrueForge events normalised for FORGE's UI/timeline. Field names follow the SDK's camelCase. */
 export type ForgeStreamEvent =
-  | { type: "turn.started"; turnId: string }
+  | { type: "turn.started"; turnId: string; sessionId: string }
   | { type: "mcp.ready"; servers: string[] }
   | { type: "text.delta"; threadId: string; messageId: string; text: string }
   | { type: "message.complete"; threadId: string; messageId: string; text: string; model?: string | undefined; usage?: Usage | undefined }
@@ -46,7 +46,11 @@ export type ApprovalDecision = { status: "allow" } | { status: "deny"; reason: s
 export interface RunTurnOptions {
   sessionId: string;
   text: string;
+  /** Continue an existing turn (e.g. after a window reload) instead of starting a new one. `text` is ignored. */
+  resume?: { turnId: string } | undefined;
   signal?: AbortSignal | undefined;
+  /** Stop listening WITHOUT cancelling the TrueForge turn (window closed / reload). The turn keeps its state and can be resumed. */
+  detach?: AbortSignal | undefined;
   onEvent?: ((e: ForgeStreamEvent) => void) | undefined;
   /** Called for every gated tool call; resolve with the human's decision. */
   onApproval?: ((call: ToolCallInfo & { sourceEventId: string }) => Promise<ApprovalDecision>) | undefined;

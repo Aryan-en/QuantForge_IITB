@@ -44,6 +44,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeExpor
   reg("forge.newSession", () => { controller.state.messages = []; controller.state.timeline = []; controller.state.plan = []; controller.state.context = null; controller.state.sessionId = null; controller.push(); });
   reg("forge.cancel", () => controller.cancel());
   reg("forge.checkConnection", async () => { await controller.checkConnection(); void vscode.window.showInformationMessage(controller.state.connection === "ok" ? "FORGE: connected to TrueForge." : "FORGE: TrueForge is not reachable."); });
+  reg("forge.resume", () => controller.resumeTask());
   reg("forge.openSettings", () => vscode.commands.executeCommand("workbench.action.openSettings", "@ext:forge-dev.forge forge."));
   reg("forge.startTrueForge", () => {
     // TrueForge blocks loopback outbound URLs by default (SSRF guard); FORGE's editor tools live on loopback, so allow exactly 127.0.0.1.

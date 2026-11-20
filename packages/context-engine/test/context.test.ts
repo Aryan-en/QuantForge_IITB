@@ -162,3 +162,24 @@ describe.skipIf(!existsSync(path.join(flaskRoot, "src/flask/cli.py")))("Flask 3.
     expect(b.items[0]!.reasons.join(" ")).toMatch(/get_debug_flag/);
   }, 60000);
 });
+
+import { suggestMentions, scorePath } from "../src/index.js";
+describe("@ mention suggestions", () => {
+  it("ranks exact basename > prefix > substring > subsequence", () => {
+    expect(scorePath("cli.py", "pkg/cli.py")).toBeGreaterThan(scorePath("cli", "pkg/cli.py"));
+    expect(scorePath("cli", "pkg/cli.py")).toBeGreaterThan(scorePath("pkg", "pkg/cli.py"));
+    expect(scorePath("pkg", "pkg/cli.py")).toBeGreaterThan(scorePath("pcl", "pkg/cli.py"));
+    expect(scorePath("pcl", "pkg/cli.py")).toBeGreaterThan(0);
+    expect(scorePath("zzz", "pkg/cli.py")).toBe(0);
+  });
+  it("suggests files by fuzzy path and symbols by name, never secrets", async () => {
+    const ws = new NodeWorkspace(root);
+    const idx = new RepoIndex(ws);
+    const files = await suggestMentions(ws, idx, "cli");
+    expect(files[0]!).toMatchObject({ kind: "file" });
+    expect(files.map((s) => s.insert)).toEqual(expect.arrayContaining(["pkg/cli.py", "tests/test_cli.py", "docs/cli.rst"]));
+    const syms = await suggestMentions(ws, idx, "symbol:get_debug");
+    expect(syms[0]!).toMatchObject({ kind: "symbol", insert: "symbol:get_debug_flag@pkg/helpers.py" });
+    expect((await suggestMentions(ws, idx, "env")).map((s) => s.insert)).not.toContain(".env");
+  });
+});

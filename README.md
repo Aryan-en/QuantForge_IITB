@@ -5,7 +5,7 @@
 FORGE is an AI software-engineering agent for Visual Studio Code. You describe a task in plain language; FORGE finds the relevant code in your repository, plans the change, edits several files, runs your tests, and shows every modification as a reviewable diff before anything touches disk. The agent loop runs on [TrueForge](https://github.com/truefoundry/trueforge) (TrueFoundry's open-source agent harness); FORGE is the editor-native client and tool provider.
 
 > ### Project status (2026-11-20)
-> The backend and VS Code extension are **built and verified with a scripted model**: 59 unit/integration tests, 10 live tests against **real TrueForge** and the **real Flask 3.1.3** repo, and 42 checks inside a **real VS Code** (Task A inline edit, automatic fallback, unreachable-endpoint error; `git status` clean afterwards). **No real LLM has been run against the three tasks yet**, the React UI in `client-end/` has **not** been built (that folder is deliberately untouched), and the repo has **no `LICENSE`** yet. Full evidence and gaps: [context/progress_tracker.md](context/progress_tracker.md).
+> The backend and VS Code extension are **built and verified with a scripted model**: 79 unit/integration tests, 11 live tests against **real TrueForge** and the **real Flask 3.1.3** repo, and 86 checks inside a **real VS Code** (Task A inline edit, automatic fallback, unreachable-endpoint error, resume across a real restart; `git status` clean afterwards). **No real LLM has been run against the three tasks yet**, the React UI in `client-end/` has **not** been built (that folder is deliberately untouched), and the repo has **no `LICENSE`** yet. Full evidence and gaps: [context/progress_tracker.md](context/progress_tracker.md).
 >
 > **Frontend location:** `/Users/aryansingh/Documents/QuantForge_IITB/client-end/`.
 >
@@ -45,15 +45,19 @@ Legend: ✅ implemented and verified (with a scripted model — see status box) 
 | Inline edit (`Cmd/Ctrl+Alt+K`) | ✅ | Selection + instruction → proposal → native diff, per-hunk CodeLens Accept/Reject, apply, undo. Verified in real VS Code |
 | Autonomous agent mode | ✅ | TrueForge loop + 11 MCP tools; Task B edits 3 files none named in the prompt; commands verified in a shadow copy |
 | Context engine | ✅ | ripgrep + Tree-sitter (Python, TS/JS) + import graph + test affinity; IDF-weighted ranking; tiered token budget (hard cap); reasons and exclusions |
-| Context inspector | 🟡 | Sidebar tab shows items, tiers, tokens, reasons, exclusions, budget; no `@` autocomplete yet |
+| Context inspector + `@` picker | ✅ | Sidebar tab shows items, tiers, tokens, reasons, exclusions, budget; `@` dropdown suggests files and symbols |
 | Diff review & safety | ✅ | Hunks, per-hunk accept/reject, apply via `WorkspaceEdit`, undo journal, stale/conflict detection; nothing is written before approval |
 | Review Gate | ✅ | `submit_changes` is approval-gated by TrueForge; its approval *is* the review |
-| Streaming | 🟡 | Token deltas and tool events stream to the sidebar; no batching/virtualisation |
+| Streaming | ✅ | Token deltas (coalesced per frame) and tool events stream to the sidebar |
 | Cancellation | ✅ | Stop aborts TrueForge's turn *and* FORGE's running tools; process groups reaped; tree stays clean |
 | Model resilience | ✅ | Real TrueForge error payloads classified; backoff with jitter; stall detection; automatic fallback to a second configured model |
 | Execution timeline / plan | 🟡 | Basic tabs in a vanilla sidebar |
 | React UI per the UI registry | 📐 | Not built; `client-end/` untouched |
-| Session resume after reload, SQLite index, Welcome/Settings screens | 📐 | |
+| Resume after window reload | ✅ | Persists the turn, review queue and conversation; offers *Resume*; verified across a real VS Code restart |
+| Crash recovery of applied changes | ✅ | Intent/commit journal; reconciled at startup |
+| Persistent symbol index (SQLite FTS5) | ✅ | Optional, incremental, falls back automatically |
+| Packaged `.vsix` | ✅ | `npm run package` (per-platform; includes ripgrep) |
+| Welcome/Settings/Model screens | 📐 | Part of the unbuilt React UI |
 
 ## 4. Architecture
 
@@ -121,7 +125,7 @@ Versions are pinned in the package manifests.
 git clone <repo-url> QuantForge_IITB && cd QuantForge_IITB
 npm ci                    # installs all workspaces (packages/*)
 npm run typecheck         # strict TypeScript, 6 packages
-npm test                  # 59 unit + MCP tests
+npm test                  # 79 unit + MCP + eligibility-guard tests
 node scripts/build.mjs    # bundles the extension to packages/extension/dist (+ wasm, ripgrep, agents)
 ```
 The competition fixture (needs Python ≥ 3.9, git, network): `eval/setup-flask.sh` (clones Flask 3.1.3, asserts commit `22d92470`, creates a venv with an editable install and `pytest<9`).
@@ -151,6 +155,7 @@ Facts below were verified against a real local TrueForge on 2026-11-20.
 | Real VS Code tests (isolated profile; uses `/Applications/Visual Studio Code.app`, override with `FORGE_VSCODE_EXE`) | `npm run test:vscode` |
 | Everything | `eval/run-fixed-tasks.sh` |
 | Build the extension | `node scripts/build.mjs` |
+| Package a `.vsix` | `npm run package` → `packages/extension/forge-<platform>-<arch>.vsix`; install with `code --install-extension <file>` |
 | Run it | Open this repo in VS Code → *Run and Debug* → launch an **Extension Development Host** with `extensionDevelopmentPath=packages/extension` (or `code --extensionDevelopmentPath=packages/extension <workspace>`) |
 | Headless tool server | `npm run forge:serve -- --workspace <dir> [--auto-accept]` (`--auto-accept` is for the evaluation harness only) |
 
@@ -234,8 +239,8 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 ## 15. Limitations
 
 - **No real-model results yet.** All end-to-end tests use a scripted fake model; success rates, models used and cost for Tasks A/B/C are unmeasured.
-- The React UI of the UI registry is not built (`client-end/` untouched); the sidebar is a compact vanilla-JS UI.
-- No session persistence/resume after a window reload; no SQLite index; no composer `@` autocomplete; undo-journal crash recovery not implemented.
+- The React UI of the UI registry is not built (`client-end/` untouched); the sidebar is a compact vanilla-JS UI. VSIX is per-platform (bundled ripgrep) and unsigned.
+- Only the active session is persisted/resumable (no multi-session history list).
 - VS Code has no stable inline-diff API: FORGE uses CodeLens + native diff editor + sidebar, not first-party inline chat diffs.
 - TrueForge has no shipped automatic model fallback, so FORGE's fallback starts a *new* TrueForge session with a progress summary (TrueForge-internal state is not carried over).
 - TrueForge must be launched with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'`, otherwise it refuses FORGE's loopback tool server.

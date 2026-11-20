@@ -18,6 +18,7 @@ export interface ResilientRunOptions {
   models: string[];
   specFor: (model: string) => AgentSpec;
   signal?: AbortSignal | undefined;
+  detach?: AbortSignal | undefined;
   onEvent?: ((e: ForgeStreamEvent) => void) | undefined;
   onNotice?: ((n: Notice) => void) | undefined;
   onApproval?: ((call: ToolCallInfo & { sourceEventId: string }) => Promise<ApprovalDecision>) | undefined;
@@ -70,7 +71,7 @@ export async function runResilient(api: TrueForgeApi, o: ResilientRunOptions): P
       notice({ kind: "attempt", model, attempt });
       let outcome: TurnOutcome;
       try {
-        outcome = await runTurn(api.sdk as TrueForge, { sessionId, text: attempt === 0 ? o.text + handoff : `Continue the task. (Retry ${attempt}.)`, signal: o.signal, onEvent: o.onEvent, onApproval: o.onApproval, stallTimeoutMs: o.stallTimeoutMs });
+        outcome = await runTurn(api.sdk as TrueForge, { sessionId, text: attempt === 0 ? o.text + handoff : `Continue the task. (Retry ${attempt}.)`, signal: o.signal, detach: o.detach, onEvent: o.onEvent, onApproval: o.onApproval, stallTimeoutMs: o.stallTimeoutMs });
       } catch (e) {
         const fe = e instanceof ForgeClientError ? e : new ForgeClientError(classifyThrown(e).errorClass, (e as Error).message, e);
         const c = classifyThrown(fe.cause ?? fe);

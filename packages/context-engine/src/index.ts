@@ -8,3 +8,5 @@ export * from "./graph.js";
 export * from "./terms.js";
 export * from "./mentions.js";
 export * from "./assemble.js";
+export * from "./suggest.js";
+export * from "./sqlite-index.js";
