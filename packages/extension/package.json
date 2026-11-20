@@ -1,0 +1,210 @@
+{
+  "name": "forge",
+  "displayName": "FORGE",
+  "description": "Editor-native coding agent. The agent loop runs on TrueForge; every change is reviewed hunk by hunk before it touches disk.",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "publisher": "forge-dev",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "AI",
+    "Programming Languages"
+  ],
+  "main": "./dist/extension.cjs",
+  "extensionKind": [
+    "workspace"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "FORGE is read-only in untrusted workspaces: it will not run commands or apply changes."
+    }
+  },
+  "activationEvents": [
+    "onView:forge.sidebar",
+    "onCommand:forge.openAgent",
+    "onCommand:forge.inlineEdit",
+    "onCommand:forge.startTrueForge"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "forge",
+          "title": "FORGE",
+          "icon": "media/forge.svg"
+        }
+      ]
+    },
+    "views": {
+      "forge": [
+        {
+          "type": "webview",
+          "id": "forge.sidebar",
+          "name": "Agent"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "forge.inlineEdit",
+        "title": "FORGE: Inline Edit Selection",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.openAgent",
+        "title": "FORGE: Open Agent",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.newSession",
+        "title": "FORGE: New Session",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.cancel",
+        "title": "FORGE: Stop",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.startTrueForge",
+        "title": "FORGE: Start TrueForge (local mode)",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.checkConnection",
+        "title": "FORGE: Check TrueForge Connection",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.review.acceptAll",
+        "title": "FORGE: Accept All Changes",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.review.rejectAll",
+        "title": "FORGE: Reject All Changes",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.review.apply",
+        "title": "FORGE: Apply Accepted Changes",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.review.undo",
+        "title": "FORGE: Undo Last Applied Batch",
+        "category": "FORGE"
+      },
+      {
+        "command": "forge.hunk.accept",
+        "title": "FORGE: Accept Hunk"
+      },
+      {
+        "command": "forge.hunk.reject",
+        "title": "FORGE: Reject Hunk"
+      },
+      {
+        "command": "forge.openSettings",
+        "title": "FORGE: Open Settings",
+        "category": "FORGE"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "forge.inlineEdit",
+        "key": "ctrl+alt+k",
+        "mac": "cmd+alt+k",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "forge.openAgent",
+        "key": "ctrl+alt+f",
+        "mac": "cmd+alt+f"
+      },
+      {
+        "command": "forge.cancel",
+        "key": "ctrl+alt+.",
+        "mac": "cmd+alt+.",
+        "when": "forge.running"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "forge.inlineEdit",
+          "when": "editorHasSelection",
+          "group": "navigation@9"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "FORGE",
+      "properties": {
+        "forge.trueforge.baseUrl": {
+          "type": "string",
+          "default": "http://localhost:8790",
+          "description": "URL of the local TrueForge server. Must be a loopback address."
+        },
+        "forge.model.primary": {
+          "type": "string",
+          "default": "",
+          "description": "TrueForge model name (provider/model) used by the agent. Configure providers and API keys in TrueForge, never here."
+        },
+        "forge.model.fallbacks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Ordered TrueForge model names to fall back to automatically when the primary fails."
+        },
+        "forge.context.budgetTokens": {
+          "type": "number",
+          "default": 24000,
+          "minimum": 1000,
+          "description": "Token budget for automatically assembled context."
+        },
+        "forge.context.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Extra glob patterns excluded from search and context."
+        },
+        "forge.stallTimeoutMs": {
+          "type": "number",
+          "default": 45000,
+          "minimum": 5000,
+          "description": "Treat the model as stalled after this long without any event."
+        },
+        "forge.review.autoOpenOnPause": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the review automatically when the agent asks to submit changes."
+        },
+        "forge.agent.shadowWorkspace": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run agent commands in a disposable copy that includes proposed edits, never in your working tree."
+        },
+        "forge.agent.pythonBin": {
+          "type": "string",
+          "default": "",
+          "description": "Directory prepended to PATH for agent commands (e.g. a virtualenv's bin). A .venv/venv in the workspace is detected automatically."
+        }
+      }
+    }
+  },
+  "dependencies": {
+    "@forge/protocol": "*",
+    "@forge/context-engine": "*",
+    "@forge/diff-engine": "*",
+    "@forge/editor-mcp": "*",
+    "@forge/trueforge-client": "*"
+  }
+}

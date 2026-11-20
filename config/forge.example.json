@@ -1,0 +1,12 @@
+{
+  "_comment": "Example FORGE settings. Copy these keys into your VS Code settings.json (user or workspace). NO credentials belong here: model providers and API keys are configured inside TrueForge (Settings -> Models), never in FORGE.",
+  "forge.trueforge.baseUrl": "http://localhost:8790",
+  "forge.model.primary": "<provider/model exactly as listed in TrueForge, e.g. a catalog model or a custom OpenAI-compatible endpoint>",
+  "forge.model.fallbacks": ["<second provider/model as listed in TrueForge>"],
+  "forge.context.budgetTokens": 24000,
+  "forge.context.exclude": ["**/node_modules/**", "**/dist/**", "**/*.lock"],
+  "forge.stallTimeoutMs": 45000,
+  "forge.review.autoOpenOnPause": true,
+  "forge.agent.shadowWorkspace": true,
+  "forge.agent.pythonBin": ""
+}

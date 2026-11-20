@@ -111,6 +111,21 @@ Dependency order is strict: do not start a phase before its prerequisites meet t
 7. **Acceptance:** all six spikes have a written outcome and a go/no-go; ADR-002 and ADR-004 confirmed or amended.
 8. **Risks:** S1 fails (TrueForge rejects loopback MCP URL) → fallback bridge process; S6 fails → post-accept verification.
 
+**Spike outcomes (2026-11-20, run against real TrueForge in local mode, `@truefoundry/trueforge` via npx):**
+
+| Spike | Outcome |
+|---|---|
+| S1 loopback MCP | **Blocked by default** — TrueForge's SSRF guard rejects `127.0.0.1` (`Outbound URL blocked for host`). Fixed by starting TrueForge with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'`. Registration is fully scriptable: `POST /api/v1/settings/mcp-servers` with `{manifest:{type:"remote",name,description,url,auth:{type:"header",headers:{Authorization:"Bearer …"}}}}`; TrueForge then lists all 11 tools with annotations. |
+| S2 reachability | `GET /api/v1/capabilities` works as the probe; a dead server surfaces as a fetch/ECONNREFUSED error → `TRUEFORGE_UNREACHABLE`. |
+| S3 inline spec + registered server | Works: `sessions.create({agent:{spec:{…, mcp_servers:[{name:"forge-editor",…}]}}})`. |
+| S4 failure payloads | `turn.done` with `state.status:"error"`, `message:"[Model Error] Request failed (401): …"` or `"[Model Error] Cannot connect to API: …"`. TrueForge itself retries 429 (3 upstream calls) but not 500. |
+| S5 SQLite binding | Not run (optional tier). |
+| S6 shadow workspace on Flask | Works with an editable install: `pytest tests/test_cli.py` inside the shadow reports **56 passed** (55 baseline + the new test), which is impossible if it had imported the real tree. |
+| Tree-sitter packaging | `web-tree-sitter` 0.27 + `tree-sitter-wasms` are **incompatible** (dylink format). Switched to Microsoft's matched `@vscode/tree-sitter-wasm`. |
+| Fixture gotcha | Flask 3.1.3's tests import `notset` from pytest internals; **pytest < 9** is required. |
+| Cancellation semantics | TrueForge's `sessions.cancel` *waits* for running MCP calls; FORGE therefore aborts its own tool calls (`CancelRegistry`) and routes MCP `notifications/cancelled` to the in-flight request (stateless transport). Verified: processes are reaped. |
+| Deferred tool loading | `preload_tools` offers listed tools directly and the rest via `call_tool({mcp_server,tool_name,input})`. FORGE preloads the 8 essential tools so weaker models are not forced through indirection. |
+
 ### Phase 1 — Extension foundation
 1. **Objective:** Activatable extension with sidebar webview and a validated message bridge.
 2. **Tasks:** `packages/protocol` zod schemas; `packages/extension` activation, commands, `WebviewViewProvider`, CSP; `client-end/webview` esbuild entry with host bridge; design tokens; Welcome screen shell; provider-call lint guard.
@@ -239,78 +254,78 @@ Status values: NOT STARTED · IN PROGRESS · BLOCKED · IN REVIEW · COMPLETED. 
 
 | ID | Task | Priority | Dependencies | Acceptance Criteria | Status |
 |---|---|---|---|---|---|
-| FORGE-001 | Root npm workspaces, `tsconfig.base.json` (strict), ESLint, Prettier | P0 | — | `npm ci && npm run typecheck` passes from clean clone | NOT STARTED |
-| FORGE-002 | Spike S1: register loopback MCP server with local TrueForge; call a trivial tool | P0 | — | Written outcome in `docs/spikes.md`; agent session shows the tool call | NOT STARTED |
-| FORGE-003 | Spike S2: reachability endpoint + SDK behavior when TrueForge is down | P0 | — | Probe function spec + captured error shape | NOT STARTED |
-| FORGE-004 | Spike S3/S4: inline spec referencing registered MCP server; capture `turn.done` error payloads (bad key, unreachable endpoint) | P0 | FORGE-002 | Fixtures saved under `packages/trueforge-client/test/fixtures` | NOT STARTED |
+| FORGE-001 | Root npm workspaces, `tsconfig.base.json` (strict), ESLint, Prettier | P0 | — | `npm ci && npm run typecheck` passes from clean clone | COMPLETED |
+| FORGE-002 | Spike S1: register loopback MCP server with local TrueForge; call a trivial tool | P0 | — | Written outcome in `docs/spikes.md`; agent session shows the tool call | COMPLETED |
+| FORGE-003 | Spike S2: reachability endpoint + SDK behavior when TrueForge is down | P0 | — | Probe function spec + captured error shape | COMPLETED |
+| FORGE-004 | Spike S3/S4: inline spec referencing registered MCP server; capture `turn.done` error payloads (bad key, unreachable endpoint) | P0 | FORGE-002 | Fixtures saved under `packages/trueforge-client/test/fixtures` | COMPLETED |
 | FORGE-005 | Spike S5: SQLite binding for FTS5 in extension host | P2 | FORGE-001 | Decision recorded; optional | NOT STARTED |
-| FORGE-006 | Spike S6: shadow workspace on Flask 3.1.3 (`pytest tests/test_cli.py -q` runs against shadow edits) | P0 | FORGE-009 | Proposed change visible to pytest in shadow; real tree untouched | NOT STARTED |
-| FORGE-007 | Clean `client-end` template (page, metadata, fonts) and confirm ADR-009 layout | P1 | FORGE-001 | No template content remains; harness page builds | NOT STARTED |
+| FORGE-006 | Spike S6: shadow workspace on Flask 3.1.3 (`pytest tests/test_cli.py -q` runs against shadow edits) | P0 | FORGE-009 | Proposed change visible to pytest in shadow; real tree untouched | COMPLETED |
+| FORGE-007 | Clean `client-end` template (page, metadata, fonts) and confirm ADR-009 layout | P1 | FORGE-001 | No template content remains; harness page builds | BLOCKED |
 | FORGE-008 | CI workflow (typecheck, lint, unit tests, build) | P1 | FORGE-001 | Green on PR | NOT STARTED |
-| FORGE-009 | Flask fixture: clone pallets/flask at tag 3.1.3 (commit `22d92470`), create venv, record baseline `pytest tests/test_cli.py -q` | P0 | — | Baseline result and commit hash recorded in `eval/README` | NOT STARTED |
-| FORGE-010 | `packages/protocol` zod schemas (webview messages, tool IO, `TimelineEvent`) | P0 | FORGE-001 | Round-trip tests; unknown types rejected | NOT STARTED |
-| FORGE-011 | Extension scaffold: activation, commands, keybindings, settings contribution | P0 | FORGE-010 | Dev Host activates; commands listed | NOT STARTED |
-| FORGE-012 | Webview provider + CSP + bridge | P0 | FORGE-010, FORGE-011 | Ping/pong; no remote requests | NOT STARTED |
-| FORGE-013 | `client-end/webview` esbuild entry + `tokens.css` + primitives | P0 | FORGE-007, FORGE-012 | Webview renders in Dev Host with VS Code theme vars | NOT STARTED |
+| FORGE-009 | Flask fixture: clone pallets/flask at tag 3.1.3 (commit `22d92470`), create venv, record baseline `pytest tests/test_cli.py -q` | P0 | — | Baseline result and commit hash recorded in `eval/README` | COMPLETED |
+| FORGE-010 | `packages/protocol` zod schemas (webview messages, tool IO, `TimelineEvent`) | P0 | FORGE-001 | Round-trip tests; unknown types rejected | COMPLETED |
+| FORGE-011 | Extension scaffold: activation, commands, keybindings, settings contribution | P0 | FORGE-010 | Dev Host activates; commands listed | COMPLETED |
+| FORGE-012 | Webview provider + CSP + bridge | P0 | FORGE-010, FORGE-011 | Ping/pong; no remote requests | COMPLETED |
+| FORGE-013 | `client-end/webview` esbuild entry + `tokens.css` + primitives | P0 | FORGE-007, FORGE-012 | Webview renders in Dev Host with VS Code theme vars | BLOCKED |
 | FORGE-014 | Welcome screen (Ui-regitry §D.1) | P1 | FORGE-013 | Matches registry states: connected / unreachable / no model | NOT STARTED |
 | FORGE-015 | Guardrail: lint/CI check forbidding model-provider SDKs and hostnames in `packages/extension` and `packages/editor-mcp` | P0 | FORGE-001 | CI fails on `openai`, `@anthropic-ai/sdk`, `@google/genai` imports or provider URLs | NOT STARTED |
-| FORGE-016 | `trueforge-client` wrapper (connect, sessions, turns, cancel, resume) | P0 | FORGE-003, FORGE-010 | Streams a reply from local TrueForge | NOT STARTED |
-| FORGE-017 | `EventNormalizer` → `TimelineEvent` | P0 | FORGE-016 | Fixture-driven tests for all documented event types | NOT STARTED |
-| FORGE-018 | Agent definitions + instructions in `agents/`; loader | P0 | FORGE-004 | Files exist, validated against spec fields; session created from them | NOT STARTED |
+| FORGE-016 | `trueforge-client` wrapper (connect, sessions, turns, cancel, resume) | P0 | FORGE-003, FORGE-010 | Streams a reply from local TrueForge | COMPLETED |
+| FORGE-017 | `EventNormalizer` → `TimelineEvent` | P0 | FORGE-016 | Fixture-driven tests for all documented event types | COMPLETED |
+| FORGE-018 | Agent definitions + instructions in `agents/`; loader | P0 | FORGE-004 | Files exist, validated against spec fields; session created from them | COMPLETED |
 | FORGE-019 | `SessionManager` persistence/resume across reload | P1 | FORGE-016 | Reload mid-turn resumes via `subscribeToTurn` | NOT STARTED |
-| FORGE-020 | `forge.startTrueForge` + probe + model status | P1 | FORGE-003 | Status reflects Connected/Unreachable | NOT STARTED |
-| FORGE-021 | MCP server skeleton (Streamable HTTP, loopback, bearer, Origin check) | P0 | FORGE-002 | Rejects missing/invalid token and browser origins | NOT STARTED |
-| FORGE-022 | `resolveWorkspacePath` + deny lists + Workspace Trust gate | P0 | FORGE-021 | Traversal/symlink/NUL tests pass | NOT STARTED |
-| FORGE-023 | Tools: `read_file`, `get_file_structure` | P0 | FORGE-022 | Schema + error tests; size caps | NOT STARTED |
-| FORGE-024 | Tool: `search_workspace` (ripgrep) | P0 | FORGE-022 | Honors ignores; timeout; cap | NOT STARTED |
-| FORGE-025 | Tool: `find_symbol` (LSP-first, upgraded in FORGE-043) | P0 | FORGE-022 | Finds `get_debug_flag` in Flask | NOT STARTED |
-| FORGE-026 | Tools: `get_diagnostics`, `get_git_status` | P1 | FORGE-022 | Structured outputs; read-only | NOT STARTED |
-| FORGE-027 | Tool: `propose_edit` (queue API; hash checks) | P0 | FORGE-022, FORGE-030 | Never writes; stale base rejected | NOT STARTED |
-| FORGE-028 | Tool: `run_terminal` + policy + env scrub + abort | P0 | FORGE-022 | Denied cmds blocked; approval required; kill on abort | NOT STARTED |
-| FORGE-029 | Tool: `update_plan` | P1 | FORGE-021 | UI-only effect; limits enforced | NOT STARTED |
-| FORGE-030 | `diff-engine`: structured patch, hunk ids, review state machine | P0 | FORGE-010 | Unit tests incl. CRLF/EOF newline | NOT STARTED |
-| FORGE-031 | Inline edit command, keybinding, instruction input | P0 | FORGE-018, FORGE-023 | Selection captured with file/version | NOT STARTED |
-| FORGE-032 | Inline diff UI: decorations, CodeLens, `forge-proposed:` provider | P0 | FORGE-030 | Per-hunk accept/reject in editor | NOT STARTED |
-| FORGE-033 | **Task A pass** on Flask 3.1.3 | P0 | FORGE-027, FORGE-031, FORGE-032 | `FLASK_DEBUG=off python -c "from flask.helpers import get_debug_flag; print(get_debug_flag())"` prints `False` after accept | NOT STARTED |
-| FORGE-034 | Apply engine: 3-way merge + `WorkspaceEdit` batch | P0 | FORGE-030 | Conflicts never overwrite | NOT STARTED |
-| FORGE-035 | Undo journal in extension storage + crash recovery | P0 | FORGE-034 | apply∘undo identity (property test) | NOT STARTED |
-| FORGE-036 | Stale/concurrent modification detection | P0 | FORGE-034 | Edit during pending review → `stale` | NOT STARTED |
+| FORGE-020 | `forge.startTrueForge` + probe + model status | P1 | FORGE-003 | Status reflects Connected/Unreachable | COMPLETED |
+| FORGE-021 | MCP server skeleton (Streamable HTTP, loopback, bearer, Origin check) | P0 | FORGE-002 | Rejects missing/invalid token and browser origins | COMPLETED |
+| FORGE-022 | `resolveWorkspacePath` + deny lists + Workspace Trust gate | P0 | FORGE-021 | Traversal/symlink/NUL tests pass | COMPLETED |
+| FORGE-023 | Tools: `read_file`, `get_file_structure` | P0 | FORGE-022 | Schema + error tests; size caps | COMPLETED |
+| FORGE-024 | Tool: `search_workspace` (ripgrep) | P0 | FORGE-022 | Honors ignores; timeout; cap | COMPLETED |
+| FORGE-025 | Tool: `find_symbol` (LSP-first, upgraded in FORGE-043) | P0 | FORGE-022 | Finds `get_debug_flag` in Flask | COMPLETED |
+| FORGE-026 | Tools: `get_diagnostics`, `get_git_status` | P1 | FORGE-022 | Structured outputs; read-only | COMPLETED |
+| FORGE-027 | Tool: `propose_edit` (queue API; hash checks) | P0 | FORGE-022, FORGE-030 | Never writes; stale base rejected | COMPLETED |
+| FORGE-028 | Tool: `run_terminal` + policy + env scrub + abort | P0 | FORGE-022 | Denied cmds blocked; approval required; kill on abort | COMPLETED |
+| FORGE-029 | Tool: `update_plan` | P1 | FORGE-021 | UI-only effect; limits enforced | COMPLETED |
+| FORGE-030 | `diff-engine`: structured patch, hunk ids, review state machine | P0 | FORGE-010 | Unit tests incl. CRLF/EOF newline | COMPLETED |
+| FORGE-031 | Inline edit command, keybinding, instruction input | P0 | FORGE-018, FORGE-023 | Selection captured with file/version | IN REVIEW |
+| FORGE-032 | Inline diff UI: decorations, CodeLens, `forge-proposed:` provider | P0 | FORGE-030 | Per-hunk accept/reject in editor | IN REVIEW |
+| FORGE-033 | **Task A pass** on Flask 3.1.3 | P0 | FORGE-027, FORGE-031, FORGE-032 | `FLASK_DEBUG=off python -c "from flask.helpers import get_debug_flag; print(get_debug_flag())"` prints `False` after accept | IN REVIEW |
+| FORGE-034 | Apply engine: 3-way merge + `WorkspaceEdit` batch | P0 | FORGE-030 | Conflicts never overwrite | COMPLETED |
+| FORGE-035 | Undo journal in extension storage + crash recovery | P0 | FORGE-034 | apply∘undo identity (property test) | IN REVIEW |
+| FORGE-036 | Stale/concurrent modification detection | P0 | FORGE-034 | Edit during pending review → `stale` | COMPLETED |
 | FORGE-037 | Diff Review UI (file list, hunks, accept/reject/all, undo, summaries) | P0 | FORGE-034, FORGE-013 | Registry parity; keyboard operable | NOT STARTED |
-| FORGE-038 | Shadow Workspace + shadow-aware `read_file` | P0 | FORGE-006, FORGE-027 | Tests run on proposed code; real tree untouched | NOT STARTED |
-| FORGE-039 | Agent workspace UI: composer, stream, timeline, approval card, cancel | P0 | FORGE-017, FORGE-013 | Registry parity | NOT STARTED |
-| FORGE-040 | Plan Viewer | P1 | FORGE-029, FORGE-039 | Steps reflect `update_plan` | NOT STARTED |
-| FORGE-041 | **Task B pass** on Flask 3.1.3 | P0 | FORGE-038, FORGE-039, FORGE-037 | ≥3 files changed; `pytest tests/test_cli.py -q` passes; demo app masks secrets | NOT STARTED |
-| FORGE-042 | Context core: mention parser, ripgrep wrapper, composer autocomplete | P0 | FORGE-024 | `@file`/`@symbol` resolve; errors visible | NOT STARTED |
-| FORGE-043 | `web-tree-sitter` Python + TS/JS symbols and imports | P0 | FORGE-042 | Symbols for Flask modules extracted | NOT STARTED |
-| FORGE-044 | Import graph + test-affinity | P1 | FORGE-043 | Neighbors computed to depth 2 | NOT STARTED |
-| FORGE-045 | Scorer + token budgeter + tier ladder + compression | P0 | FORGE-043 | Budget never exceeded (property test) | NOT STARTED |
-| FORGE-046 | `get_context` tool | P0 | FORGE-045 | Returns items, reasons, exclusions | NOT STARTED |
-| FORGE-047 | Context Inspector UI | P1 | FORGE-046, FORGE-013 | Shows selected/excluded/reasons/budget | NOT STARTED |
-| FORGE-048 | Context eval harness (recall@10 on Tasks A/B) | P1 | FORGE-046, FORGE-009 | Report generated | NOT STARTED |
+| FORGE-038 | Shadow Workspace + shadow-aware `read_file` | P0 | FORGE-006, FORGE-027 | Tests run on proposed code; real tree untouched | COMPLETED |
+| FORGE-039 | Agent workspace UI: composer, stream, timeline, approval card, cancel | P0 | FORGE-017, FORGE-013 | Registry parity | IN PROGRESS |
+| FORGE-040 | Plan Viewer | P1 | FORGE-029, FORGE-039 | Steps reflect `update_plan` | IN PROGRESS |
+| FORGE-041 | **Task B pass** on Flask 3.1.3 | P0 | FORGE-038, FORGE-039, FORGE-037 | ≥3 files changed; `pytest tests/test_cli.py -q` passes; demo app masks secrets | IN REVIEW |
+| FORGE-042 | Context core: mention parser, ripgrep wrapper, composer autocomplete | P0 | FORGE-024 | `@file`/`@symbol` resolve; errors visible | IN PROGRESS |
+| FORGE-043 | `web-tree-sitter` Python + TS/JS symbols and imports | P0 | FORGE-042 | Symbols for Flask modules extracted | COMPLETED |
+| FORGE-044 | Import graph + test-affinity | P1 | FORGE-043 | Neighbors computed to depth 2 | COMPLETED |
+| FORGE-045 | Scorer + token budgeter + tier ladder + compression | P0 | FORGE-043 | Budget never exceeded (property test) | COMPLETED |
+| FORGE-046 | `get_context` tool | P0 | FORGE-045 | Returns items, reasons, exclusions | COMPLETED |
+| FORGE-047 | Context Inspector UI | P1 | FORGE-046, FORGE-013 | Shows selected/excluded/reasons/budget | IN PROGRESS |
+| FORGE-048 | Context eval harness (recall@10 on Tasks A/B) | P1 | FORGE-046, FORGE-009 | Report generated | IN REVIEW |
 | FORGE-049 | Optional SQLite FTS5 index | P2 | FORGE-005, FORGE-043 | Incremental update < 500 ms | NOT STARTED |
-| FORGE-050 | Streaming pipeline: delta batching, virtualized timeline | P0 | FORGE-039 | Smooth under 10k deltas | NOT STARTED |
-| FORGE-051 | Cancellation end-to-end (UI, `sessions.cancel`, AbortSignals, late-event guard) | P0 | FORGE-028, FORGE-039 | Matrix of cancel points tested | NOT STARTED |
-| FORGE-052 | Error classifier from real payloads | P0 | FORGE-004 | Table-driven tests | NOT STARTED |
-| FORGE-053 | Retry/backoff with jitter; stall detector | P0 | FORGE-052 | Deterministic fake-timer tests | NOT STARTED |
-| FORGE-054 | Fallback session + handoff builder | P0 | FORGE-053, FORGE-018 | Continues task on fallback model | NOT STARTED |
-| FORGE-055 | Model Configuration screen + error banners | P1 | FORGE-054 | Registry parity | NOT STARTED |
-| FORGE-056 | **Task C pass** | P0 | FORGE-054, FORGE-055 | VS Code responsive; error/fallback visible; `git status --porcelain` empty | NOT STARTED |
+| FORGE-050 | Streaming pipeline: delta batching, virtualized timeline | P0 | FORGE-039 | Smooth under 10k deltas | IN PROGRESS |
+| FORGE-051 | Cancellation end-to-end (UI, `sessions.cancel`, AbortSignals, late-event guard) | P0 | FORGE-028, FORGE-039 | Matrix of cancel points tested | IN REVIEW |
+| FORGE-052 | Error classifier from real payloads | P0 | FORGE-004 | Table-driven tests | COMPLETED |
+| FORGE-053 | Retry/backoff with jitter; stall detector | P0 | FORGE-052 | Deterministic fake-timer tests | COMPLETED |
+| FORGE-054 | Fallback session + handoff builder | P0 | FORGE-053, FORGE-018 | Continues task on fallback model | COMPLETED |
+| FORGE-055 | Model Configuration screen + error banners | P1 | FORGE-054 | Registry parity | IN PROGRESS |
+| FORGE-056 | **Task C pass** | P0 | FORGE-054, FORGE-055 | VS Code responsive; error/fallback visible; `git status --porcelain` empty | IN REVIEW |
 | FORGE-057 | Settings screen + contributed settings | P1 | FORGE-013 | All registry settings present | NOT STARTED |
 | FORGE-058 | Theme + responsive pass (dark/light/HC; 280–900 px) | P1 | FORGE-037, FORGE-039 | Playwright snapshots | NOT STARTED |
 | FORGE-059 | Accessibility audit and fixes | P1 | FORGE-058 | axe: 0 serious/critical | NOT STARTED |
-| FORGE-060 | Extension integration tests (`@vscode/test-electron`) | P0 | FORGE-033 | Suite runs in CI | NOT STARTED |
+| FORGE-060 | Extension integration tests (`@vscode/test-electron`) | P0 | FORGE-033 | Suite runs in CI | IN REVIEW |
 | FORGE-061 | Playwright UI suite on mock-host harness | P1 | FORGE-007 | Suite runs in CI | NOT STARTED |
-| FORGE-062 | `eval/run-fixed-tasks.sh` (Tasks A–C, repeatable) | P0 | FORGE-033, FORGE-041, FORGE-056 | Outputs pass/fail + session ids | NOT STARTED |
+| FORGE-062 | `eval/run-fixed-tasks.sh` (Tasks A–C, repeatable) | P0 | FORGE-033, FORGE-041, FORGE-056 | Outputs pass/fail + session ids | COMPLETED |
 | FORGE-063 | Performance validation vs. NFR targets | P1 | FORGE-050 | Report | NOT STARTED |
 | FORGE-064 | Demo script, recording, evidence bundle | P0 | FORGE-062 | `docs/demo.md` | NOT STARTED |
 | FORGE-065 | VSIX packaging + `.vscodeignore` | P1 | FORGE-060 | Installs in clean profile | NOT STARTED |
 | FORGE-066 | Choose and add an open-source `LICENSE` (rule 7); attribution for upstream deps; CHANGELOG | **P0** | — | `LICENSE` present at root; README §17 matches | NOT STARTED |
 | FORGE-067 | README clean-machine verification | P0 | FORGE-065 | Steps run verbatim | NOT STARTED |
-| FORGE-068 | `config/forge.example.json` (+ documented TrueForge model setup, no secrets) | P0 | FORGE-016 | Example works when keys are filled via TrueForge; secret scan clean | NOT STARTED |
-| FORGE-069 | Fork-point declaration ("from scratch", scaffold note) and any reused-code attribution | P0 | FORGE-007 | README §17 states upstream URL + commit or "from scratch" | NOT STARTED |
+| FORGE-068 | `config/forge.example.json` (+ documented TrueForge model setup, no secrets) | P0 | FORGE-016 | Example works when keys are filled via TrueForge; secret scan clean | COMPLETED |
+| FORGE-069 | Fork-point declaration ("from scratch", scaffold note) and any reused-code attribution | P0 | FORGE-007 | README §17 states upstream URL + commit or "from scratch" | COMPLETED |
 | FORGE-070 | Write-up PDF (8 mandated headings, accurate scorecard with video timestamps, honest limitations) | P0 | FORGE-064 | 1–3 pages; headings in order | NOT STARTED |
-| FORGE-071 | `submit_changes` Review Gate tool + approval-driven review flow + local-review safety net | P0 | FORGE-027, FORGE-034 | Allow applies accepted hunks only; Deny applies none; agent receives applied/rejected lists | NOT STARTED |
-| FORGE-072 | Agent spec tuning: subagent delegation for discovery, deferred tool loading, compaction; show in session | P0 | FORGE-018, FORGE-046 | Subagent `thread.created` events and deferred loading visible in a Task B session | NOT STARTED |
+| FORGE-071 | `submit_changes` Review Gate tool + approval-driven review flow + local-review safety net | P0 | FORGE-027, FORGE-034 | Allow applies accepted hunks only; Deny applies none; agent receives applied/rejected lists | COMPLETED |
+| FORGE-072 | Agent spec tuning: subagent delegation for discovery, deferred tool loading, compaction; show in session | P0 | FORGE-018, FORGE-046 | Subagent `thread.created` events and deferred loading visible in a Task B session | IN REVIEW |
 | FORGE-073 | Model-agnostic validation: run Tasks A–C on ≥2 distinct models incl. one local/OpenAI-compatible; no model-specific code | P0 | FORGE-062 | Results table in write-up | NOT STARTED |
 | FORGE-074 | Demo video (≤ 4 min, Tasks A→B→C, on-screen verification, TrueForge session during B) | P0 | FORGE-062 | Public link | NOT STARTED |
 | FORGE-075 | Submission checklist: public repo, public video link, PDF link, no secrets, LICENSE | P0 | FORGE-066–070, FORGE-074 | All links open logged-out | NOT STARTED |

@@ -1,0 +1,23 @@
+{
+  "x-description": "FORGE autonomous multi-file agent. The agent loop runs on TrueForge; editor capabilities come from the forge-editor MCP server hosted by the FORGE extension. model.name is replaced at runtime from the forge.model.primary setting (a TrueForge 'provider/model' name).",
+  "model": { "name": "REPLACED_AT_RUNTIME", "params": { "temperature": 0.2 } },
+  "mcp_servers": [
+    {
+      "name": "forge-editor",
+      "enable_tools": ["@all"],
+      "preload_tools": ["get_context", "read_file", "search_workspace", "find_symbol", "propose_edit", "run_terminal", "submit_changes", "update_plan"],
+      "require_approval_for_tools": ["run_terminal", "submit_changes"]
+    }
+  ],
+  "config": {
+    "sandbox": { "enabled": false },
+    "ask_user_questions": { "enabled": true },
+    "dynamic_sub_agents": { "enabled": true },
+    "generative_ui": { "enabled": false },
+    "context_management": {
+      "compaction": { "enabled": true },
+      "large_tool_response": { "enabled": true }
+    },
+    "iteration_limit": 60
+  }
+}

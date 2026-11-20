@@ -1,0 +1,30 @@
+{
+  "name": "forge-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FORGE \u2014 editor-native coding agent for VS Code, agent loop on TrueForge",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b packages/protocol packages/diff-engine packages/context-engine packages/editor-mcp packages/trueforge-client packages/extension",
+    "test": "vitest run",
+    "build": "node scripts/build.mjs",
+    "forge:serve": "tsx packages/editor-mcp/src/cli.ts",
+    "forge:setup": "tsx scripts/setup-trueforge.mts",
+    "test:live": "vitest run --config vitest.live.config.mts",
+    "test:vscode": "tsx packages/extension/test/vscode/run.live.ts"
+  },
+  "engines": {
+    "node": ">=22.14"
+  },
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "@types/vscode": "1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "esbuild": "0.28.2",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.1.1"
+  }
+}

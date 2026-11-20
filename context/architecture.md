@@ -2,7 +2,7 @@
 
 > **Status of this document:** design of record. Nothing described here is implemented yet unless [progress_tracker.md](progress_tracker.md) says so with evidence.
 > **Frontend location:** all frontend code lives in this repository at `/Users/aryansingh/Documents/QuantForge_IITB/`, in the `client-end/` workspace (see [§H](#h-repository-structure) and ADR-009).
-> **Related:** [plan.md](plan.md) (sequence) · [Ui-regitry.md](Ui-regitry.md) (UI) · [Agents.md](Agents.md) (rules for AI contributors) · [README.md](README.md) · [progress_tracker.md](progress_tracker.md)
+> **Related:** [plan.md](plan.md) (sequence) · [Ui-regitry.md](Ui-regitry.md) (UI) · [Agents.md](Agents.md) (rules for AI contributors) · [README.md](../README.md) · [progress_tracker.md](progress_tracker.md)
 
 > **Competition source of truth:** `TrueFoundry_Forge-a-thon_compressed_UvvRJ9C (2).pdf` in the repository root (Techfest 2026-27 problem statement, read 2026-11-20). Its scoring rubric (A1–C2) is mapped to modules in [plan.md §A](plan.md#a-product-objectives).
 
@@ -86,7 +86,7 @@ flowchart LR
 | Editor capabilities (read, search, propose a write, run a command) are MCP tools | [§B.4](#b4-mcp-tool-layer) |
 | TrueForge tool approval drives diff review (rubric B4 ≥ 7) | `submit_changes` Review Gate, ADR-014 |
 | At least one TrueForge context-engineering feature, visible in the session (rubric B4 = 10) | Subagents (discovery), deferred tool loading, compaction; [§B.3](#b3-trueforge-integration), ADR-015 |
-| Declared fork point, upstream licence preserved | From scratch (no upstream editor project adopted yet); any later reuse must be declared with repo URL + commit ([README](README.md#17-licence-and-attribution)) |
+| Declared fork point, upstream licence preserved | From scratch (no upstream editor project adopted yet); any later reuse must be declared with repo URL + commit ([README](../README.md#17-licence-and-attribution)) |
 | Never commit keys; ship example config | `config/forge.example.json` (planned, FORGE-068) |
 | Sessions, turns, tool calls demonstrable | TrueForge Sessions UI + FORGE Execution Timeline ([Ui-regitry.md §D.6](Ui-regitry.md)) |
 
@@ -169,8 +169,7 @@ Events consumed (documented): `turn.created`, `turn.update` (`paused`/`running`)
     "name": "forge-editor",
     "enable_tools": ["@all"],
     "require_approval_for_tools": ["run_terminal", "submit_changes"],
-    "preload": false,
-    "preload_tools": ["get_context", "read_file", "propose_edit", "submit_changes"]
+    "preload_tools": ["get_context", "read_file", "search_workspace", "find_symbol", "propose_edit", "run_terminal", "submit_changes", "update_plan"]
   }],
   "config": {
     "sandbox": { "enabled": false },
@@ -185,11 +184,11 @@ Events consumed (documented): `turn.created`, `turn.update` (`paused`/`running`)
 }
 ```
 
-**TrueForge context-engineering features used (rubric B4):** *deferred tool loading* (`preload: false` with a small `preload_tools` set — the schemas of rarely used tools load on demand, visible in the session); *subagents* (`dynamic_sub_agents`; the instructions direct the agent to delegate broad discovery — "find every file relevant to X" — to a subagent so the main thread's context stays small; visible as `thread.created`/`thread.done` events); *compaction* and *large tool response offloading* (documented defaults, set explicitly). *Code Mode* and skills require the optional sandbox and are not used (ADR-015). `sandbox` stays disabled, which the rules permit.
+**TrueForge context-engineering features used (rubric B4):** *deferred tool loading* (`preload_tools` lists the 8 essential tools; `get_file_structure`, `get_diagnostics` and `get_git_status` are offered through TrueForge's `list_tools`/`call_tool` indirection, visible in the session); *subagents* (`dynamic_sub_agents`; the instructions direct the agent to delegate broad discovery — "find every file relevant to X" — to a subagent so the main thread's context stays small; visible as `thread.created`/`thread.done` events); *compaction* and *large tool response offloading* (documented defaults, set explicitly). *Code Mode* and skills require the optional sandbox and are not used (ADR-015). `sandbox` stays disabled, which the rules permit.
 
 The model name is a placeholder; the real value comes from the user's TrueForge configuration (`forge.model.primary`). The inline-edit agent sets `enable_tools` to `["read_file","get_file_structure","find_symbol","get_diagnostics","propose_edit","submit_changes"]`, disables subagents, and uses `iteration_limit` ≈ 12 (target).
 
-> **Open integration points (spikes, not assumptions):** S1 — can TrueForge local mode register/attach an MCP server at `http://127.0.0.1:<port>`, and can that be done through the API instead of the Settings → Connectors UI? S2 — health/reachability endpoint and SDK behavior when the server is down. S3 — whether an inline `agent.spec` may reference an MCP server by name that was registered separately. S4 — exact shape of `turn.done` with `status: "error"` for model auth/network failures. These are tracked in [plan.md Phase 0/2](plan.md#d-development-phases). If S1 fails, fallback is documented in ADR-002.
+> **Integration points — verified 2026-11-20 against real TrueForge (local mode):** loopback MCP registration works once TrueForge is started with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (its SSRF guard blocks loopback otherwise) and is scriptable via `POST /api/v1/settings/mcp-servers`; `GET /api/v1/capabilities` is the reachability probe; an inline `agent.spec` can reference the registered server by name; model failures arrive as `turn.done` `state.status:"error"` with `[Model Error] Request failed (NNN): …` / `Cannot connect to API: …`. Details and remaining unknowns: [§K](#k-implementation-notes-verified-findings).
 
 ### B.4 MCP Tool Layer
 
@@ -247,7 +246,7 @@ flowchart TD
 | 1 Parse | Extract identifiers, quoted strings, file-like tokens, and verbs from the request; derive query terms and lightweight synonyms (e.g. `config` → `config`, `Config`, `app.config`). Pure string work; no model call. |
 | 2 Mentions | `@file:src/flask/cli.py`, `@symbol:get_debug_flag`, plus `@src/flask/cli.py` shorthand from the composer autocomplete. Unresolvable mentions surface as inline errors, never silently dropped. Mentioned items get score 1.0 and are non-evictable up to 50% of the budget. |
 | 3 Search | `ripgrep` (npm `@vscode/ripgrep` binary) with `--json`, `.gitignore` honored, per-term searches merged. Hits scored by term coverage and match density. |
-| 4 Symbols | Tree-sitter via `web-tree-sitter` (WASM — avoids per-Electron-ABI native rebuilds) extracts definitions/imports for **Python and TypeScript/JavaScript first** (Flask demo is Python). LSP enrichment uses the stable commands `vscode.executeWorkspaceSymbolProvider`, `executeDocumentSymbolProvider`, `executeDefinitionProvider`, `executeReferenceProvider`. |
+| 4 Symbols | Tree-sitter via `@vscode/tree-sitter-wasm` (WASM — avoids per-Electron-ABI native rebuilds) extracts definitions/imports for **Python and TypeScript/JavaScript first** (Flask demo is Python). LSP enrichment uses the stable commands `vscode.executeWorkspaceSymbolProvider`, `executeDocumentSymbolProvider`, `executeDefinitionProvider`, `executeReferenceProvider`. |
 | 5 Dependencies | Import graph from Tree-sitter (importers and imports, depth ≤ 2), reference sites from LSP, and test affinity (`tests/test_<module>.py`, `*.test.ts`). Used to pull neighbors of high-scoring files. |
 | 6 Scoring | `score = 1.0·mention + 0.45·textMatch + 0.35·symbolNameMatch + 0.25·graphProximity(1/(1+hops)) + 0.10·testAffinity + 0.10·recency(open/modified) − 0.5·lowValuePenalty` clipped to [0,1]. Weights are **initial targets**, tuned against the fixed tasks ([plan.md §G](plan.md#g-competition-validation)). Low-value: lockfiles, minified, generated, vendored, snapshots. |
 | 7 Rank | Sort by score; dedupe overlapping ranges; cap per-file contribution. |
@@ -727,7 +726,7 @@ Dependency direction (enforced by lint, planned): `protocol` ← everything; `co
 | **ADR-005** | Repository understanding without huge prompts | Embeddings-first; whole-repo stuffing | Lexical + structural retrieval (ripgrep, Tree-sitter, LSP, import graph) with tiered budgeting; embeddings optional | Deterministic, explainable, no extra infra, works offline | Weaker on purely semantic queries; mitigated by agent iteration |
 | **ADR-006** | TrueForge has no shipped automatic model fallback (roadmap item) | Wait for TrueForge; implement provider fallback in extension | FORGE orchestrates retry + fallback *session* creation through TrueForge | Satisfies resilience without provider calls | Fallback session loses TrueForge-internal state; handoff summary is lossy |
 | **ADR-007** | Inline diff surface | Proposed VS Code inline-chat API; custom webview editor | Decorations + CodeLens + `vscode.diff` with content provider | Stable public APIs only | Less polished than first-party inline diff |
-| **ADR-008** | Parsing tech | Native tree-sitter bindings; regex heuristics | `web-tree-sitter` (WASM) | No Electron ABI rebuilds; portable VSIX | Slower than native; grammar `.wasm` files bundled |
+| **ADR-008** | Parsing tech | Native tree-sitter bindings; regex heuristics; `web-tree-sitter` + `tree-sitter-wasms` | Microsoft's `@vscode/tree-sitter-wasm` (WASM runtime + matched grammars) | No Electron ABI rebuilds; portable VSIX. `web-tree-sitter` 0.27 + `tree-sitter-wasms` were tested and are incompatible (dylink format) | Slower than native; `.wasm` files are copied next to the bundle |
 | **ADR-009** | A Next.js scaffold exists in `client-end/`; VS Code webviews need a static bundle with CSP, no network fonts | Discard `client-end`; rewrite as Vite app; make Next static export the webview | Keep `client-end/` as the single frontend workspace: Next app = component gallery + mock-host harness (Playwright tests, visual QA); `client-end/webview/` = esbuild entry reusing the same `components/`. Webview uses VS Code theme variables and font stack, **not** `next/font/google` (Geist) | Honors the repo's existing frontend and the "frontend lives in this repository" requirement; keeps one component source | Two entry points to maintain; Next-specific config (`cacheComponents`, `partialPrefetching`) must not leak into shared components. **Open question for the owner:** confirm this split ([progress_tracker.md Decision Log](progress_tracker.md#f-decision-log)) |
 | **ADR-010** | Monorepo tooling | pnpm/turbo; single package | npm workspaces + esbuild + `tsc -b` | Minimal infra; `client-end` already uses npm (`package-lock.json`) | No task caching; acceptable at this size |
 | **ADR-011** | Validation at trust boundaries | Trust TS types only | zod schemas in `packages/protocol` for webview messages and MCP tool IO | Runtime safety at every boundary; schemas double as docs | Slight runtime cost |
@@ -749,3 +748,22 @@ Dependency direction (enforced by lint, planned): `protocol` ← everything; `co
 - **More model providers:** zero FORGE work — configured in TrueForge; the fallback chain accepts any TrueForge model name, including custom OpenAI-compatible endpoints (local models).
 - **Hosted TrueForge:** supported by `baseUrl` + `token`; requires the MCP server to be reachable from the hosted server (tunnel or relay) — out of scope for v1 and explicitly not required.
 - **No microservices.** Scaling happens inside the extension host (workers) and TrueForge.
+
+---
+
+## K. Implementation notes (verified findings)
+
+Everything here was observed on 2026-11-20 by running the code; see [progress_tracker.md](progress_tracker.md) for the evidence list.
+
+1. **TrueForge must allow loopback.** Start it with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (JSON array env var read by TrueForge; `NETWORK_POLICY_ENABLED=false` would disable the whole guard and is *not* recommended). The extension's *Start TrueForge* command sets exactly this. Without it, registration fails with `Outbound URL blocked for host "127.0.0.1"` and FORGE shows that hint.
+2. **Registration** is `POST /api/v1/settings/mcp-servers` (fallback `PUT` on conflict) with a bearer header in `auth.headers`; TrueForge redacts the header in responses. The bearer token is regenerated each activation, so FORGE re-registers on every connection check.
+3. **Stateless MCP transport.** One fresh `McpServer` per HTTP POST. Because MCP `notifications/cancelled` arrives as a *separate* POST, `startForgeMcpHttp` keeps an in-flight map keyed by JSON-RPC request id and aborts the matching call; client disconnect also aborts. `ToolContext.cancel` (`CancelRegistry`) lets the host abort every running tool when the user presses Stop, because TrueForge's `sessions.cancel` *waits* for running MCP calls.
+4. **Edits.** `propose_edit.edits` accepts `{oldText,newText}` (exactly-once match, CRLF-aware — the most reliable form for weaker models) or `{range,newText}` (1-based inclusive lines). Mixing the two is rejected. `read_file` returns `N| text` lines plus `contentHash`; for files with a pending proposal it returns the *proposed* text (`fromProposal:true`).
+5. **Review Gate.** `submit_changes` is approval-gated by name. In `host` mode the human's per-hunk choices are made in the UI *before* the approval is answered; *Allow* then applies exactly the accepted hunks (undecided = rejected) and returns applied/rejected/conflicted lists to the agent; *Deny* applies nothing. `auto-accept` mode exists only for the headless evaluation harness. If the user allows with zero accepted hunks the controller answers *deny* ("the developer accepted no hunks").
+6. **Shadow workspace** copies the ripgrep-visible file list into `<globalStorage>/<workspace-hash>/shadow/<session>` (outside the workspace), symlinks `.venv`/`venv`/`node_modules`/`.tox`, overlays pending proposals, and sets `PYTHONPATH=<shadow>/src:<shadow>` so an editable install resolves to the shadow. `git …` commands run in the real workspace. Commands run without a shell, from a scrubbed environment (variables matching KEY/TOKEN/SECRET/PASSWORD/CREDENTIAL/AUTH/COOKIE/SESSION removed), in their own process group (killed on timeout/cancel).
+7. **Terminal allowlist** (default-deny): pytest, python/python3, node, npm (test/run/ls/list/outdated), git (read-only verbs), ls, cat, head, tail, wc, grep, rg, find (no -exec/-delete), flask, ruff, mypy, pyflakes, tsc, vitest, eslint, pwd, echo, diff, sort, uniq, which, env (no args), pip (list/show/freeze/check only), uv run. Leading `VAR=value` is allowed except PATH/HOME/LD_*/DYLD_*/PYTHONPATH/NODE_OPTIONS/GIT_*/…; shell metacharacters, `sudo`, `rm`, `curl`, `bash`, `docker`, `npx`, installs and mutating git verbs are denied.
+8. **Resilience.** `classifyMessage` maps real TrueForge messages: 401/403 → `MODEL_AUTH` (no retry, immediate fallback); 429/408 → `MODEL_RATE_LIMIT` (2 attempts; TrueForge already retried 3×); ≥500 and `Cannot connect to API` → `MODEL_UNAVAILABLE` (2 attempts); no events for `forge.stallTimeoutMs` → `STALLED` (cancel + retry/fallback); SDK/network failure reaching TrueForge → `TRUEFORGE_UNREACHABLE` (no fallback possible, fails fast). Backoff is full-jitter `random(0, min(8000, 500·2^attempt))`. Retries reuse the session; fallback creates a *new* session with a progress handoff appended to the task.
+9. **Agent files** live in `agents/` (`forge-agent.json`, `forge-inline-edit.json` + `*.instructions.md`); the loader strips `x-*` metadata and injects `model.name` from `forge.model.primary`/`fallbacks`. The extension reads them from `<extension>/agents` (copied by `scripts/build.mjs`).
+10. **Packaging in a bundle.** `import.meta.url` is shimmed; Tree-sitter grammars are loaded from `dist/wasm` (`setWasmDir`), ripgrep from `dist/bin` (`setRgPath`, `@vscode/ripgrep` aliased to a stub), and the MCP SDK/TrueForge SDK are bundled. A headless ESM runner (`dist/forge-mcp.mjs`) serves the same tools without VS Code.
+11. **Not implemented / known gaps:** session persistence and resume after window reload (`SessionManager`), SQLite FTS5 index (Tier 1), composer `@` autocomplete UI, crash-recovery reconciliation of the undo journal, per-hunk *editor* decorations for added lines (CodeLens + native diff + sidebar are implemented), Welcome/Settings/Model screens of [Ui-regitry.md](Ui-regitry.md) (the shipped sidebar is a compact vanilla-JS UI; the registry's React UI in `client-end/` is not built), CI, VSIX packaging, licence.
+

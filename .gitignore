@@ -1,0 +1,15 @@
+node_modules/
+dist/
+out/
+*.vsix
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.vscode-test/
+.DS_Store
+eval/work/
+coverage/
+
+packages/extension/agents/
+packages/extension/dist/

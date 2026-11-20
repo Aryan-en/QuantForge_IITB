@@ -1,8 +1,8 @@
 # FORGE — Progress Tracker
 
-> **Rule:** this file records *implementation reality*. A row may be marked COMPLETED only with evidence (a file path, a test run, a recorded session). Existence of documentation is never evidence of implementation.
-> **Frontend location:** `/Users/aryansingh/Documents/QuantForge_IITB/client-end/` (inside this repository).
-> **Related:** [plan.md](plan.md) · [architecture.md](architecture.md) · [Ui-regitry.md](Ui-regitry.md) · [Agents.md](Agents.md) · [README.md](README.md)
+> **Rule:** this file records *implementation reality*. A row is COMPLETED only with evidence (a path, a command and its result). Documentation existing for a feature is not evidence.
+> **Frontend location:** `/Users/aryansingh/Documents/QuantForge_IITB/client-end/` (inside this repository). It is **untouched** by design in this phase (owner instruction); see §A "Frontend".
+> **Related:** [plan.md](plan.md) · [architecture.md](architecture.md) · [Ui-regitry.md](Ui-regitry.md) · [Agents.md](Agents.md) · [../README.md](../README.md)
 > **Status labels:** NOT STARTED · IN PROGRESS · BLOCKED · IN REVIEW · COMPLETED
 
 ---
@@ -11,236 +11,199 @@
 
 | Field | Value |
 |---|---|
-| Product | FORGE — AI-powered autonomous software engineering agent for VS Code |
-| Objective | Competition-grade, TrueForge-based coding agent: inline edit, autonomous multi-file agent, context assembly, safe diff review, streaming/cancellation, model resilience; passes fixed Flask 3.1.3 Tasks A/B/C |
-| Current phase | Phase 0 — Repository audit and setup (documentation foundation done; setup not done) |
-| Current milestone | M0 — Repository and project setup: **IN PROGRESS** |
-| Overall completion | **≈ 2 %** (estimate = mean of milestone completion across M0–M10; only M0 has any, and only for the audit/docs part) |
+| Product | FORGE — editor-native coding agent for VS Code; agent loop on TrueForge |
+| Current phase | Phases 0–6, 8, 9 implemented and verified **with a scripted model**; Phase 7 largely done; Phase 10 (UI polish) and Phase 11–12 (video, write-up, packaging, licence) outstanding |
+| Overall completion | **≈ 60 %** (estimate: mean of milestone completion M0–M10 below; weighted equally) |
 | Last updated | 2026-11-20 |
-| Product code written | **None.** No extension, no MCP server, no TrueForge client, no tests. |
-| Documentation | Six engineering documents created 2026-11-20 (see §B "Documentation"). Not yet reviewed by the project owner. |
+| Product code | `packages/{protocol,diff-engine,context-engine,editor-mcp,trueforge-client,extension}`, `agents/`, `scripts/`, `eval/`, `config/` |
+
+### What "verified" means here — read this
+All end-to-end results below use a **scripted, deterministic fake model** (`packages/trueforge-client/src/testing/fake-model.ts`) behind a **real TrueForge**, real MCP tools, the real Flask 3.1.3 repo and (for the VS Code suite) a real VS Code 1.146.0. They prove FORGE's plumbing, safety and resilience. **No real LLM has been run against Tasks A/B/C yet.** Real-model pass rates, models used and cost are therefore *unknown* and must be measured before the write-up (FORGE-073).
 
 ### Current blockers and critical risks
 
-| # | Blocker / risk | Impact | Action |
+| # | Item | Impact | Action |
 |---|---|---|---|
-| B1 | **Round 1 submission deadline is 20 Nov 2026, 23:59 IST** (per `TrueFoundry_Forge-a-thon_compressed_UvvRJ9C (2).pdf`), the same day as this audit. The full roadmap cannot be completed by then. | Critical | Confirm the deadline on the Techfest portal now. If firm, follow the minimum-credible-submission order in [plan.md R14](plan.md#h-risk-register) and be explicit in the write-up about what is built and what is not. |
-| B2 | Spike S1 unverified: can TrueForge local mode attach a loopback MCP server, and can that be configured by API rather than only the Settings → Connectors UI? | Gates all agent tooling | FORGE-002 |
-| B3 | No model provider/key is configured in a local TrueForge yet (none verified) | Gates live testing | Configure in TrueForge Settings → Models; never in the repo |
-| B4 | No `LICENSE` file; the rules require a public open-source repository | Eligibility | FORGE-066 |
-| B5 | Not yet confirmed that the competition-supplied commit `22d92470` corresponds to Flask tag `3.1.3` (tag exists on GitHub; commit mapping not verified) | Low | FORGE-009 |
+| B1 | **Round 1 deadline is 20 Nov 2026 23:59 IST** (competition PDF). Outstanding mandatory artefacts: demo video, write-up PDF, public repo with `LICENSE`. | Critical | Confirm date; record real-model runs; see [plan.md R14](plan.md#h-risk-register) |
+| B2 | No `LICENSE` file (open-source licence is required). Choosing one is the owner's decision. | Eligibility | Owner picks; FORGE-066 |
+| B3 | No real model has been exercised; behaviour with weaker/local models is unmeasured. | High | Configure ≥2 real models in TrueForge; run Tasks A–C; FORGE-073 |
+| B4 | Frontend (`client-end/`) is the unmodified Next.js starter by instruction; the registry's React UI is not built. The extension ships a compact vanilla-JS sidebar instead. | Medium (C1/UX) | Owner decision on when to build the React UI against `packages/protocol` |
+| B5 | Nothing is committed from this phase (working tree only). | Low | Owner commits when satisfied |
+| ~~B6~~ | ~~Loopback MCP registration unverified~~ — **resolved** (needs `OUTBOUND_URL_ALLOWED_HOSTS`). | — | [architecture.md §K](architecture.md#k-implementation-notes-verified-findings) |
+| ~~B7~~ | ~~Commit `22d92470` ↔ tag `3.1.3` unverified~~ — **verified** (`release version 3.1.3`). | — | `eval/setup-flask.sh` asserts it |
 
-### Repository audit evidence (2026-11-20)
+### Verification evidence (all run on 2026-11-20, macOS, Node v26.13.1, VS Code 1.146.0, TrueForge via `npx @truefoundry/trueforge@latest`)
 
-| Item | Finding |
+| Command | Result |
 |---|---|
-| Git | 1 commit (`21f6143 Initial commit`), branch `main`. Untracked: `client-end/`, six docs, the competition PDF. |
-| Root files | `README.md` (single line `# QuantForge_IITB`, since replaced by the full README), the competition PDF. No `package.json`, no workspace config, no `LICENSE`, no CI. |
-| `client-end/` | Unmodified `create-next-app` output: `next 16.4.6`, `react 19.3.0`, `react-dom 19.3.0`, `tailwindcss 4.3.3`, `@tailwindcss/turbopack 4.3.3`, `typescript ^5`, `eslint ^9`, `eslint-config-next 16.4.6`. `app/page.tsx` is the default template; `app/layout.tsx` metadata title is "Create Next App"; Geist fonts via `next/font/google`. `next.config.ts` enables `experimental.agentFeedback`, `cacheComponents`, `partialPrefetching` and a Tailwind turbopack rule. `node_modules/` installed. `client-end/AGENTS.md` (auto-generated) warns that this Next.js version has breaking changes and docs are in `node_modules/next/dist/docs/`. |
-| Scripts available | `npm run dev`, `build`, `start`, `lint` (in `client-end/`). |
-| Verified runs | `npx tsc --noEmit` → exit 0; `npm run lint` → exit 0 (both on the unmodified scaffold). `npm run build` and `npm run dev` **not run** (UNKNOWN; build needs Google Fonts network access). |
-| Environment | Node `v26.13.1`, npm `11.20.0` on the audit machine. TrueForge documents Node ≥ 22.14. The Node range required by Next 16.4.6 was **not verified**. |
-| TrueForge | Official repo read via GitHub on 2026-11-20 (MIT; SDK `@truefoundry/trueforge-sdk`; local mode `npx @truefoundry/trueforge@latest` at `http://localhost:8790`). TrueForge was **not installed or run** here. |
-| Competition statement | Found: `TrueFoundry_Forge-a-thon_compressed_UvvRJ9C (2).pdf` (appeared in the root during the audit). Scoring rubric and deadline captured in [plan.md §A](plan.md#a-product-objectives). |
-| Case-insensitivity | The filesystem is case-insensitive (macOS). The requested `Readme.md` and the existing `README.md` are the same file; **`README.md` is the canonical name**. The requested `Ui-regitry.md` spelling is preserved intentionally. |
+| `npx tsc -b packages/*` (strict, 6 packages) | exit 0 |
+| `npx vitest run` | **59 passed** (diff-engine 21, context-engine 17, editor-mcp 21) |
+| `npm run test:live` (real TrueForge + real Flask + scripted model) | **10 passed**: Task A (apply, denied review, undo), Task B (3 files, 56 passed in shadow, `flask --help` lists `config`, masking via real CLI, pending state has zero writes), cancel-and-reap, Task C ×5 |
+| `npm run test:vscode` (real VS Code, isolated profile) | **42 checks passed** across 3 scenarios (Task A inline, automatic fallback on a 401, unreachable endpoint with banner); `git status --porcelain` empty after each; worst extension-host event-loop stall 106–131 ms |
+| `eval/setup-flask.sh` | Flask 3.1.3 @ `22d92470`; baseline `pytest tests/test_cli.py -q` = 55 passed, 3 skipped |
+| Mutation check | Injecting an off-by-one into the hunk applier made a diff-engine test fail (tests can fail) |
+| Retrieval on Flask 3.1.3 | Task B: `cli.py` #1, `tests/test_cli.py` #3, `docs/cli.rst` #7 (24k-token budget, ~365 ms); Task A: `helpers.py` #1 citing `get_debug_flag (function, L28-33)` |
 
-### Reality assessment (feature classification)
-
-| Feature | Class | Evidence |
-|---|---|---|
-| VS Code extension | PLANNED | no `package.json` with `engines.vscode`, no `src/extension.ts` |
-| React webview | PLANNED | `client-end/` has React 19 + Tailwind 4 dependencies but only the template page |
-| Next.js frontend scaffold | PARTIALLY IMPLEMENTED | `client-end/` builds types/lint clean; no FORGE UI |
-| TrueForge integration, sessions, MCP tools | PLANNED | no SDK dependency present |
-| Context engine, diff engine, resilience | PLANNED | — |
-| Agent definition in repo | PLANNED | no `agents/` directory |
-| Tests | PLANNED | no test runner configured anywhere |
-| TrueForge availability | UNKNOWN | not installed/run in this audit |
-| MCP loopback registration | UNKNOWN | spike S1 not run |
+### Frontend
+`client-end/` was **not modified**. A first commit by the owner (`274ea2b`) tracks the Next.js starter. The webview bridge contract (`packages/protocol`) is ready for a React UI; until then the extension's sidebar (`packages/extension/src/webviewHtml.ts`) provides Agent / Context / Plan / Review / Timeline tabs.
 
 ---
 
 ## B. Overall Progress Dashboard
 
-Owner is **Unassigned** until the team confirms assignments (git user on this machine: Aryan Singh).
-
-| Module | Status | Completion | Priority | Owner | Notes |
+| Module | Status | Completion | Priority | Owner | Notes / evidence |
 |---|---|---|---|---|---|
-| VS Code extension foundation | NOT STARTED | 0 % | P0 | Unassigned | Phase 1; FORGE-010–012 |
-| React webview | NOT STARTED | 0 % | P0 | Unassigned | `client-end/` scaffold exists (template only); ADR-009 pending owner confirmation; FORGE-007, 013 |
-| TrueForge integration | NOT STARTED | 0 % | P0 | Unassigned | Phase 2; FORGE-016–018; docs read, nothing run |
-| Agent session management | NOT STARTED | 0 % | P0 | Unassigned | FORGE-019 |
-| MCP tool layer | NOT STARTED | 0 % | P0 | Unassigned | Phase 3; gated by spike S1 (FORGE-002) |
-| Inline editing | NOT STARTED | 0 % | P0 | Unassigned | Phase 4; FORGE-031–033 |
-| Autonomous agent mode | NOT STARTED | 0 % | P0 | Unassigned | Phase 6; FORGE-038–041 |
-| Context engine | NOT STARTED | 0 % | P0 | Unassigned | Phase 7; FORGE-042–046 |
-| Symbol retrieval | NOT STARTED | 0 % | P0 | Unassigned | `find_symbol`, Tree-sitter; FORGE-025, 043 |
-| Diff review | NOT STARTED | 0 % | P0 | Unassigned | Phase 5; FORGE-030, 034, 037 |
-| Hunk acceptance/rejection | NOT STARTED | 0 % | P0 | Unassigned | Includes Review Gate FORGE-071 |
-| Undo functionality | NOT STARTED | 0 % | P0 | Unassigned | FORGE-035 |
-| Streaming | NOT STARTED | 0 % | P0 | Unassigned | FORGE-017, 050 |
-| Cancellation | NOT STARTED | 0 % | P0 | Unassigned | FORGE-051 |
-| Model resilience | NOT STARTED | 0 % | P0 | Unassigned | FORGE-052–053 |
-| Automatic fallback | NOT STARTED | 0 % | P0 | Unassigned | FORGE-054; needs ≥2 configured models (rubric B3 = 10) |
-| Repository intelligence | NOT STARTED | 0 % | P1 | Unassigned | Import graph, index; FORGE-044, 049 |
-| Testing | NOT STARTED | 0 % | P0 | Unassigned | No test runner configured; FORGE-008, 060–063 |
-| Documentation | IN REVIEW | 85 % | P0 | Unassigned | Six docs written 2026-11-20; cross-check run the same day: 34 anchor links resolve, all 16 Mermaid diagrams parse with the real `mermaid` parser, tool names consistent; README commands for unbuilt parts are marked PLANNED; needs owner review |
-| Competition demo | NOT STARTED | 0 % | P0 | Unassigned | FORGE-062, 064, 070, 074 |
+| VS Code extension foundation | COMPLETED | 100 % | P0 | Unassigned | Activates in real VS Code; commands, keybindings, settings, CSP webview (`test:vscode`) |
+| React webview | BLOCKED | 10 % | P0 | Unassigned | `client-end/` untouched by instruction; vanilla sidebar ships instead |
+| TrueForge integration | COMPLETED | 95 % | P0 | Unassigned | SDK client, event normaliser, approvals, probe, registration (live tests) |
+| Agent session management | IN PROGRESS | 60 % | P1 | Unassigned | Sessions/turns/retry/fallback work; **no persistence/resume after reload** |
+| MCP tool layer | COMPLETED | 100 % | P0 | Unassigned | 11 tools, loopback+bearer, 21 tests, verified through real TrueForge |
+| Inline editing | IN REVIEW | 85 % | P0 | Unassigned | Verified end-to-end in VS Code via `runTask`; input-box command path and keybinding not exercised; real-model run pending |
+| Autonomous agent mode | IN REVIEW | 80 % | P0 | Unassigned | Task B passes live with scripted model; real-model run pending |
+| Context engine | COMPLETED | 90 % | P0 | Unassigned | Ranking, budget invariant, tiers, reasons, exclusions; composer `@` autocomplete missing |
+| Symbol retrieval | COMPLETED | 100 % | P0 | Unassigned | Tree-sitter Python/TS/JS; `find_symbol` |
+| Diff review | COMPLETED | 90 % | P0 | Unassigned | Hunks, review state, native diff, CodeLens, sidebar; added-line decorations absent |
+| Hunk acceptance/rejection | COMPLETED | 100 % | P0 | Unassigned | Per-hunk accept/reject verified in tests and VS Code |
+| Undo functionality | IN REVIEW | 90 % | P0 | Unassigned | Identity property test + VS Code undo; **crash-recovery reconciliation not implemented** |
+| Streaming | IN REVIEW | 75 % | P0 | Unassigned | Deltas forwarded to UI; no frame batching/virtualisation |
+| Cancellation | IN REVIEW | 85 % | P0 | Unassigned | Live: process reaped, tree clean; UI latency target (<200 ms) not measured |
+| Model resilience | COMPLETED | 95 % | P0 | Unassigned | Classifier from real payloads, backoff, stall detection |
+| Automatic fallback | COMPLETED | 95 % | P0 | Unassigned | Verified live and in VS Code; fallback session carries a progress handoff only |
+| Repository intelligence | IN PROGRESS | 70 % | P1 | Unassigned | Import graph + test affinity done; SQLite FTS5 tier not started |
+| Testing | IN PROGRESS | 70 % | P0 | Unassigned | 59 + 10 + 42; **no CI**, no Playwright UI tests |
+| Documentation | IN REVIEW | 90 % | P0 | Unassigned | Updated to reality 2026-11-20 |
+| Competition demo | NOT STARTED | 0 % | P0 | Unassigned | No video, no write-up PDF, no real-model runs |
 
 ---
 
 ## C. Mandatory Capability Tracker
 
-Evidence columns hold *paths or run logs*; "—" means none exists.
-
-### C.1 Inline Edit — rubric A1 (10 pts)
+### C.1 Inline Edit — rubric A1 (10)
 | Field | Value |
 |---|---|
-| Requirements | Selection + keybinding + plain-language instruction → in-editor diff, per-hunk accept/reject; no copy-paste |
-| Implementation status | NOT STARTED |
-| Relevant source files | Planned: `packages/extension/src/inline/*`, `agents/forge-inline-edit.json`, `packages/diff-engine` |
-| Unit tests | — |
-| Integration tests | — |
-| Demonstration | NOT STARTED (Task A) |
-| Remaining work | FORGE-018, 027, 030–033, 071 |
-| Acceptance criteria | Task A diff rendered in editor; per-hunk accept; `FLASK_DEBUG=off … get_debug_flag` prints `False` |
+| Implementation | IN REVIEW |
+| Source | `packages/extension/src/{extension,controller,reviewUi}.ts`, `agents/forge-inline-edit.*` |
+| Unit / integration tests | diff-engine 21; live `Task A` ×2; VS Code `taskA` 15 checks |
+| Demonstration | Not recorded. Scripted-model run passes; real-model run not done |
+| Remaining | Real-model Task A; exercise keybinding + input box; added-line decorations |
+| Acceptance | Diff rendered in editor with per-hunk Accept/Reject (**met**: CodeLens Accept/Reject/Diff verified); `FLASK_DEBUG=off … get_debug_flag` → `False` (**met** for scripted edit, incl. `off OFF Off n N`) |
 
 ### C.2 Autonomous Agent Mode — rubric A2 (10), B4 (10)
 | Field | Value |
 |---|---|
-| Requirements | Single request drives TrueForge tool loop (read, search, write, run); ≥3 files, none named by user; TrueForge approval drives review; ≥1 context-engineering feature |
-| Implementation status | NOT STARTED |
-| Relevant source files | Planned: `agents/forge-agent.json`, `packages/editor-mcp`, `packages/extension/src/{agent,shadow}` |
-| Unit tests | — |
-| Integration tests | — |
-| Demonstration | NOT STARTED (Task B) |
-| Remaining work | FORGE-021–029, 038–041, 071, 072 |
-| Acceptance criteria | Task B: ≥3 files changed, `pytest tests/test_cli.py -q` passes, masked JSON shown, TrueForge session with turns/tool calls shown |
+| Implementation | IN REVIEW |
+| Source | `agents/forge-agent.*`, `packages/editor-mcp/src/*`, `controller.ts` |
+| Tests | live Task B ×2 (3 files, shadow `56 passed`, masking, zero writes while paused) |
+| Demonstration | Not recorded; no real model |
+| Remaining | Real-model Task B; show subagent/deferred-loading events in a real session; TrueForge session screenshots |
+| Acceptance | ≥3 files, none named (**met** with scripted model); approval drives review (**met**: `submit_changes` gated); ≥1 context-engineering feature visible (**configured** — subagents, deferred loading, compaction in the spec; **not yet shown with a real model**) |
 
-### C.3 Context Assembly — rubric B1 (15 pts)
+### C.3 Context Assembly — rubric B1 (15)
 | Field | Value |
 |---|---|
-| Requirements | `@file`, `@symbol`, automatic retrieval, symbol-level retrieval, dependency awareness, ranking, token budget, compression, exclusions, visible reasons |
-| Implementation status | NOT STARTED |
-| Relevant source files | Planned: `packages/context-engine/*`, `client-end/components/forge/ContextInspector*` |
-| Unit tests | — |
-| Integration tests | — |
-| Demonstration | NOT STARTED |
-| Remaining work | FORGE-042–048 |
-| Acceptance criteria | Budget never exceeded (property test); Task B retrieval surfaces `src/flask/cli.py`, `tests/test_cli.py`, `docs/cli.rst` in top-10 (target); Context Inspector shows reasons live |
+| Implementation | COMPLETED (engine) / IN PROGRESS (UI) |
+| Source | `packages/context-engine/src/*`, `get_context` tool, sidebar Context tab |
+| Tests | 17 unit incl. Flask golden (Task A/B top-k) and a hard budget invariant |
+| Remaining | `@` autocomplete in the composer; Context Inspector polish; recall measurement beyond two tasks |
+| Acceptance | Budget never exceeded (**met**, tested at 500…24000); Task B target files in top-10 (**met**: ranks 1, 3, 7); reasons visible (**met** in sidebar) |
 
-### C.4 Diff Review and Safety — rubric B2 (10 pts)
+### C.4 Diff Review and Safety — rubric B2 (10)
 | Field | Value |
 |---|---|
-| Requirements | File- and hunk-level diffs, per-hunk accept/reject, accept/reject all, undo, summaries, no silent writes, workspace consistency |
-| Implementation status | NOT STARTED |
-| Relevant source files | Planned: `packages/diff-engine/*`, `packages/extension/src/review/*` |
-| Unit tests | — |
-| Integration tests | — |
-| Demonstration | NOT STARTED |
-| Remaining work | FORGE-027, 030, 034–037, 071 |
-| Acceptance criteria | Zero writes before accept (fs-watcher test); apply∘undo = identity; conflicts never overwritten; undo shown on screen |
+| Implementation | COMPLETED (core) |
+| Tests | 21 diff-engine (property tests, 147 random cases), concurrent edit, conflict never overwritten, undo refuses to clobber, failed batch leaves nothing |
+| Remaining | Crash-recovery of journal; editor decorations for additions |
+| Acceptance | Zero writes before approval (**met**, asserted via `git status` and file hashes while paused); per-hunk; undo identity (**met**) |
 
-### C.5 Streaming and Cancellation — rubric A3 (10 pts)
+### C.5 Streaming and Cancellation — rubric A3 (10)
 | Field | Value |
 |---|---|
-| Requirements | Stream TrueForge events; UI responsive; cancel mid-generation; consistent workspace; no partial application |
-| Implementation status | NOT STARTED |
-| Relevant source files | Planned: `packages/trueforge-client/src/stream.ts`, `packages/extension/src/cancel.ts` |
-| Unit tests | — |
-| Integration tests | — |
-| Demonstration | NOT STARTED |
-| Remaining work | FORGE-017, 050, 051 |
-| Acceptance criteria | UI reflects cancel < 200 ms (target); process group dead < 2 s; workspace byte-identical after cancel |
+| Implementation | IN REVIEW |
+| Tests | live cancel test (process killed ≤ seconds, no orphans, tree clean, queue empty); MCP-level cancel + host-level cancel + timeout |
+| Remaining | UI latency measurement; frame batching; resume after reload |
+| Acceptance | Workspace consistent after cancel (**met**); immediate UI (**unmeasured**) |
 
-### C.6 TrueForge eligibility gate (pass/fail) and resilience
+### C.6 Eligibility gate and resilience — rubric B3 (10)
 | Item | Status | Evidence |
 |---|---|---|
-| Agent loop on TrueForge; no second loop | NOT STARTED (design only) | [architecture.md ADR-001](architecture.md#i-architectural-decision-records) |
-| Extension is an SDK/HTTP client | NOT STARTED | — |
-| Editor capabilities as MCP tools | NOT STARTED | — |
-| TrueForge local mode | NOT STARTED | TrueForge not yet run |
-| Models configured in TrueForge only | NOT STARTED | guardrail FORGE-015 |
-| Agent definition in repo | NOT STARTED | `agents/` absent |
-| Demo shows Task B session | NOT STARTED | — |
-| Resilience (Task C, rubric B3) | NOT STARTED | FORGE-052–056 |
+| Agent loop on TrueForge, no second loop | COMPLETED | No provider SDK in code; loop is TrueForge's (FORGE-015 CI guard **not yet written**) |
+| Extension is a TrueForge SDK client | COMPLETED | `@truefoundry/trueforge-sdk` 0.185.0 |
+| Editor capabilities as MCP tools | COMPLETED | 11 tools via loopback MCP |
+| TrueForge local mode | COMPLETED | all runs use `npx @truefoundry/trueforge@latest` |
+| Models via TrueForge only | COMPLETED | settings hold model *names* only |
+| Agent definition in repo | COMPLETED | `agents/forge-agent.json`, `agents/forge-inline-edit.json` |
+| Demo shows Task B session | NOT STARTED | video not recorded |
+| Task C automatic fallback | IN REVIEW | live + VS Code (401 → fallback); unreachable → clear error, tree clean |
 
-### C.7 Submission artefacts (mandatory)
+### C.7 Submission artefacts
 | Artefact | Status | Notes |
 |---|---|---|
-| Public GitHub repo with working README, fork-point declaration, example config, LICENSE, no secrets | NOT STARTED | README written (setup for unbuilt parts marked PLANNED); LICENSE, `config/forge.example.json` absent; FORGE-066/068/069 |
-| Demo video ≤ 4 min (Tasks A→B→C) | NOT STARTED | FORGE-074 |
-| Write-up PDF, 8 mandated headings | NOT STARTED | FORGE-070 |
+| Public repo, README, example config, fork-point declaration | IN PROGRESS | README updated, `config/forge.example.json` ✓, "from scratch" declared; **`LICENSE` missing**; not pushed/public |
+| Demo video ≤ 4 min | NOT STARTED | |
+| Write-up PDF (8 headings) | NOT STARTED | |
 
 ---
 
 ## D. Milestone Tracker
 
-| ID | Objective | Deliverables | Dependencies | Completion criteria | Status |
-|---|---|---|---|---|---|
-| **M0** — Repository and project setup | Workspace, tooling, CI, spikes, Flask fixture | root `package.json` workspaces, strict TS, lint, CI, spike report, Flask baseline | — | FORGE-001–009 done; `npm ci && npm run typecheck` green in CI; spikes S1–S6 resolved | **IN PROGRESS** (audit + docs done; no setup code) |
-| **M1** — TrueForge foundation | Sessions/turns from the extension | Extension scaffold, protocol schemas, webview shell, `trueforge-client`, agent definitions | M0 | A prompt streams a reply from local TrueForge; session visible in TrueForge | NOT STARTED |
-| **M2** — MCP editor integration | Agent can use editor tools | MCP server, safety layer, 8 required tools + `get_context`, `update_plan` registered; `submit_changes` registered as a stub (full Review Gate behavior lands in M4) | M1, S1 | Agent calls tools unprompted; tool calls visible in TrueForge session | NOT STARTED |
-| **M3** — Inline editing | Mandatory capability 1 | Command, keybinding, inline diff UI, inline agent | M2 | Task A passes | NOT STARTED |
-| **M4** — Diff review and safety | Mandatory capability 4 | Diff engine, hunk review, apply, undo, stale detection, review UI, Review Gate | M2 | Zero pre-accept writes; undo identity; per-hunk review on screen | NOT STARTED |
-| **M5** — Autonomous multi-file agent | Mandatory capability 2 | Agent workspace UI, approvals, Shadow Workspace, plan viewer | M3, M4, S6 | Task B passes (≥3 files, none named) | NOT STARTED |
-| **M6** — Repository context intelligence | Mandatory capability 3 | Context engine, `get_context`, Inspector, subagent delegation | M2 (parallel with M5 after interfaces stabilize) | Budget invariant; Task B retrieval top-10 target met | NOT STARTED |
-| **M7** — Streaming and cancellation | Mandatory capability 5 | Streaming pipeline, cancel end-to-end, resume | M1, M2, M5 | Cancel matrix green; workspace unchanged | NOT STARTED |
-| **M8** — Model resilience and fallback | Task C | Classifier, backoff, fallback session, banners | M1, M7 | Task C passes with error path and fallback path | NOT STARTED |
-| **M9** — UI polish and integration testing | Registry parity, a11y, themes | All eight screens, Playwright, extension integration suite | M3–M8 | axe 0 serious/critical; suites green in CI | NOT STARTED |
-| **M10** — Competition demonstration and submission | Deliverables | Eval script, demo video, write-up PDF, licence, example config, public repo | M9 | Tasks A–C pass three times; all links public before deadline | NOT STARTED |
+| ID | Objective | Status | Completion | Remaining |
+|---|---|---|---|---|
+| M0 Setup | workspaces, spikes, fixture | COMPLETED* | 85 % | CI; `client-end` cleanup is out of scope by instruction (*all spikes S1–S4, S6 resolved; S5 optional) |
+| M1 TrueForge foundation | sessions/turns from extension | COMPLETED | 90 % | session persistence/resume |
+| M2 MCP editor integration | tools reachable by agent | COMPLETED | 100 % | — |
+| M3 Inline editing | Task A | IN REVIEW | 75 % | real-model run; keybinding path test |
+| M4 Diff review and safety | hunk review, undo | COMPLETED | 85 % | crash recovery; added-line decorations |
+| M5 Autonomous multi-file agent | Task B | IN REVIEW | 70 % | real-model run; richer approval/plan UI |
+| M6 Context intelligence | retrieval + inspector | IN REVIEW | 80 % | `@` autocomplete; SQLite tier |
+| M7 Streaming and cancellation | | IN REVIEW | 70 % | latency measurement; batching |
+| M8 Resilience and fallback | Task C | COMPLETED | 90 % | real endpoint failure demo |
+| M9 UI polish and integration testing | registry parity | IN PROGRESS | 15 % | React UI (blocked on `client-end`), Playwright, a11y |
+| M10 Demonstration and submission | | NOT STARTED | 10 % | video, write-up, licence, public repo, real-model results |
 
 ---
 
 ## E. Known Bugs and Technical Debt
 
-No product bugs (no product code). Items below are defects/debt in the current repository state.
-
-| ID | Description | Severity | Reproduction | Relevant files | Proposed resolution | Status |
-|---|---|---|---|---|---|---|
-| TD-01 | `client-end` still renders the `create-next-app` demo page and metadata title "Create Next App" | Low | `cd client-end && npm run dev` → open `/` | `client-end/app/page.tsx`, `app/layout.tsx` | Replace with FORGE harness (FORGE-007) | NOT STARTED |
-| TD-02 | `globals.css` sets `font-family: Arial` on `body`, overriding the Geist variables defined in `layout.tsx` | Low | Inspect computed font | `client-end/app/globals.css` | Move to token-based font stack (Ui-regitry §B.3) | NOT STARTED |
-| TD-03 | `next/font/google` (Geist) needs network at build and cannot be used inside a VS Code webview (CSP, offline) | Medium | `next build` offline | `client-end/app/layout.tsx` | Harness-only; webview uses VS Code font variables (ADR-009) | NOT STARTED |
-| TD-04 | `next.config.ts` enables `experimental.agentFeedback`, `cacheComponents`, `partialPrefetching` and a custom turbopack Tailwind rule; compatibility with the planned component sharing is unverified | Medium | — | `client-end/next.config.ts` | Verify against `node_modules/next/dist/docs` before relying on it (UNKNOWN) | NOT STARTED |
-| TD-05 | No root `package.json`; no workspace, CI, license, or `.gitignore` at root | High | `ls` | repo root | FORGE-001, 008, 066 | NOT STARTED |
-| TD-06 | `client-end/AGENTS.md` is auto-generated by `next dev` and may be rewritten; root `Agents.md` is the FORGE contributor guide | Low | `npm run dev` | `client-end/AGENTS.md` | Keep both; root file links to it (Agents.md §B) | NOT STARTED |
-| TD-07 | Case-insensitive filesystem: `Readme.md` ≡ `README.md` | Low | `ls` | root | `README.md` canonical (D-010) | COMPLETED (decision recorded; evidence: single file `README.md`) |
-| TD-08 | Untracked `client-end/` and docs: nothing from this audit is committed | Medium | `git status` | repo | Commit when the owner approves (not done by the audit) | NOT STARTED |
-| TD-09 | `.next/` build artefacts exist under `client-end/` (git-ignored by `client-end/.gitignore`) | Low | `ls client-end/.next` | `client-end/.gitignore` | None needed | COMPLETED |
+| ID | Description | Severity | Files | Resolution | Status |
+|---|---|---|---|---|---|
+| BUG-01 *(fixed)* | Cancel did not kill the child process: stateless MCP transport routed `notifications/cancelled` to a different server instance | High | `editor-mcp/src/server.ts` | in-flight map by JSON-RPC id + `CancelRegistry` + socket-close abort; test asserts no orphans | COMPLETED |
+| BUG-02 *(fixed)* | `rg` exit code 2 with `--no-messages` threw "invalid pattern" on harmless errors | Medium | `context-engine/src/rg.ts` | only treat parse errors as invalid | COMPLETED |
+| BUG-03 *(fixed)* | Generic term "test" boosted every test file via path match; CHANGES.rst outranked docs | Medium | `context-engine/src/assemble.ts` | generic-term list, changelog penalty, relevance floor | COMPLETED |
+| TD-01 | No session persistence/resume after reload | Medium | `controller.ts` | SessionManager (FORGE-019) | NOT STARTED |
+| TD-02 | Undo journal persists but is not reconciled after a crash mid-apply | Medium | `diff-engine/src/review.ts` | startup reconciliation | NOT STARTED |
+| TD-03 | Shadow copy re-syncs the whole file list per command (fast on Flask, untested on 10k+ files) | Low | `editor-mcp/src/shadow.ts` | incremental watcher | NOT STARTED |
+| TD-04 | Terminal policy cannot express `a && b`; agents must use `cwd` | Low | `policy.ts` | by design; documented in tool description | COMPLETED |
+| TD-05 | No CI; no guard against provider SDK imports (FORGE-015) | Medium | repo | GitHub Actions + lint rule | NOT STARTED |
+| TD-06 | `client-end` still template (page, metadata, Arial/Geist mismatch, `next/font/google`) | Low | `client-end/` | owner decision | BLOCKED |
+| TD-07 | Case-insensitive FS: `Readme.md` ≡ `README.md` | Low | root | `README.md` canonical | COMPLETED |
+| TD-08 | `fileParallelism:false` live tests need network the first time (`npx`) | Low | `harness.ts` | document | COMPLETED |
 
 ---
 
 ## F. Decision Log
 
-| ID | Date | Decision | Rationale | Source |
-|---|---|---|---|---|
-| D-001 | 2026-11-20 | TrueForge owns the agent loop; extension is SDK client + MCP host | Eligibility gate | ADR-001 |
-| D-002 | 2026-11-20 | Editor tools served by a loopback Streamable-HTTP MCP server inside the extension host | TrueForge attaches MCP servers by URL (docs); editor APIs live in the extension host | ADR-002; verify via spike S1 |
-| D-003 | 2026-11-20 | `propose_edit` queues; `submit_changes` (approval-gated) is the only write path | No silent writes + rubric B4 (TrueForge approval drives review) | ADR-003/014 |
-| D-004 | 2026-11-20 | Shadow Workspace for agent verification; fallback to post-accept verification | Keep real tree untouched during runs | ADR-004; spike S6 |
-| D-005 | 2026-11-20 | Lexical + structural retrieval first; embeddings optional | Deterministic, explainable, no infra | ADR-005 |
-| D-006 | 2026-11-20 | FORGE orchestrates retry/fallback by creating new TrueForge sessions; TrueForge docs list automatic model selection as roadmap | Needed for rubric B3 = 10 | ADR-006 |
-| D-007 | 2026-11-20 | Inline diff via decorations + CodeLens + `vscode.diff` | Stable public API only | ADR-007 |
-| D-008 | 2026-11-20 | `web-tree-sitter` (WASM) | No native rebuild per Electron | ADR-008 |
-| D-009 | 2026-11-20 | **Frontend lives in `client-end/`** (existing Next.js app = component gallery/mock-host harness; `client-end/webview/` = esbuild bundle for the extension) and docs state this location. **Pending owner confirmation.** | The user instructed that docs state the frontend lives in this repository; avoids discarding existing work | ADR-009 |
-| D-010 | 2026-11-20 | `README.md` canonical; `Ui-regitry.md` spelling kept as specified | Case-insensitive FS; explicit user filename | TD-07 |
-| D-011 | 2026-11-20 | FORGE state lives in extension storage, never in the user's workspace | Task C `git status` must be clean | ADR-013 |
-| D-012 | 2026-11-20 | Docs written after reading the competition PDF; design amended for rubric (Review Gate, subagents/deferred loading/compaction, licence/example config/write-up as P0 tasks) | Scoring is anchor-based on demonstrated behaviour | plan §A |
-| D-013 | 2026-11-20 | From-scratch build (no declared upstream fork); evaluate reuse of OSS diff/webview patterns with attribution | Smaller surface for the judge call; rules allow reuse if declared | ADR-016 |
+| ID | Date | Decision | Rationale |
+|---|---|---|---|
+| D-001…D-013 | 2026-11-20 | As recorded in [architecture.md §I](architecture.md#i-architectural-decision-records) (TrueForge-only loop, loopback MCP, Review Gate, shadow workspace, lexical+structural retrieval, FORGE-side fallback, storage outside workspace, from-scratch fork point) | see ADRs |
+| D-014 | 2026-11-20 | `@vscode/tree-sitter-wasm` replaces `web-tree-sitter`+`tree-sitter-wasms` | latter pair incompatible (tested) |
+| D-015 | 2026-11-20 | `propose_edit` accepts exact-text `oldText` edits in addition to line ranges | more reliable for weaker/local models; judges may swap models |
+| D-016 | 2026-11-20 | Preload 8 essential tools; defer 3 | keeps deferred-loading visible without forcing `call_tool` indirection on weak models |
+| D-017 | 2026-11-20 | FORGE aborts its own tool calls on Stop | TrueForge `sessions.cancel` waits for running MCP calls |
+| D-018 | 2026-11-20 | Start TrueForge with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (not `NETWORK_POLICY_ENABLED=false`) | minimal loosening of TrueForge's SSRF guard |
+| D-019 | 2026-11-20 | Scripted fake model is test infrastructure only; real-model results reported separately | honesty about what is proven |
+| D-020 | 2026-11-20 | `client-end/` left untouched; extension ships a vanilla sidebar | owner instruction |
 
 ---
 
-## G. Next Actions (prioritized)
+## G. Next Actions (prioritised)
 
-1. **Confirm the Round 1 deadline** (20 Nov 2026 23:59 IST per the PDF) on the Techfest portal and decide between the full path and the minimum-credible submission ([plan.md R14](plan.md#h-risk-register)).
-2. **FORGE-001** — root npm workspaces, strict `tsconfig.base.json`, lint, `.gitignore` (add `.env*`, `dist/`, `*.vsix`).
-3. **FORGE-066 / FORGE-068** — add an open-source `LICENSE` and `config/forge.example.json` (cheap eligibility items).
-4. **FORGE-002 (spike S1)** — run `npx @truefoundry/trueforge@latest`, configure one model, attach a trivial loopback MCP server, record the outcome.
-5. **FORGE-003/004 (spikes S2–S4)** — probe/health behaviour and capture real error payloads for bad key and unreachable endpoint.
-6. **FORGE-009** — clone Flask 3.1.3 fixture, confirm commit `22d92470`, record baseline `pytest tests/test_cli.py -q`.
-7. **FORGE-010 → 013** — protocol schemas, extension scaffold, webview provider, `client-end/webview` shell (clean the template first: FORGE-007).
-8. **FORGE-016 → 018** — TrueForge client wrapper, event normalizer, agent definitions.
-9. **FORGE-021 → 028, 071** — MCP server, safety layer, tools, Review Gate.
-10. **FORGE-031 → 033** — inline edit end-to-end, then Task A.
-
-*Update this file after each meaningful milestone; do not mark anything COMPLETED without evidence.*
+1. **Run Tasks A/B/C with real models** (≥2 distinct, one OpenAI-compatible/local if possible) through the extension; record pass/fail honestly, model names, where they ran, cost (FORGE-073). Tune `agents/*.instructions.md` only from observed failures.
+2. **Add a `LICENSE`** (owner's choice) and push the repo public (FORGE-066/075).
+3. **Record the ≤4-minute demo** (Tasks A → B → C, TrueForge session visible during B) (FORGE-074).
+4. **Write the 8-heading write-up PDF** with an accurate scorecard and limitations (FORGE-070).
+5. Add CI (typecheck, unit tests, provider-import guard) (FORGE-008/015).
+6. Session persistence and resume after reload (FORGE-019).
+7. Composer `@` autocomplete + richer Context Inspector (FORGE-042/047).
+8. Build the React UI from `Ui-regitry.md` in `client-end/` once the owner lifts the freeze (FORGE-013/014/037/039/055/057/058/059/061).
+9. Journal crash-recovery; added-line decorations (TD-02).
+10. VSIX packaging per platform (ripgrep binary), clean-machine README verification (FORGE-065/067).
