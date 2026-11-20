@@ -59,7 +59,11 @@ export function createMockHost(): MockHost {
       ...DEFAULT_APP_STATE,
       connection: { status: "connected", baseUrl: "http://localhost:8790" },
       model,
-      sessions: [{ id: "ses_01HZX9", title: "flask config command", createdAt: Date.now() - 3_600_000, turns: 2, agent: "forge-agent", trueforgeUrl: "http://localhost:8790/sessions/ses_01HZX9" }],
+      sessions: [
+        { id: "ses_01HZX9", title: "New session", createdAt: Date.now(), turns: 0, agent: "forge-agent", trueforgeUrl: "http://localhost:8790/sessions/ses_01HZX9" },
+        { id: "ses_01HZQ2", title: "Refactor blueprint registration", createdAt: Date.now() - 86_400_000, turns: 4, agent: "forge-agent" },
+        { id: "ses_01HZK7", title: "Fix SameSite on session cookie", createdAt: Date.now() - 2 * 86_400_000, turns: 2, agent: "forge-inline-edit" },
+      ],
       activeSessionId: "ses_01HZX9",
       ...over,
     };

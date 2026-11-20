@@ -4,13 +4,11 @@ import {
   ArrowDown,
   ArrowLeft,
   ArrowUp,
-  BookOpen,
   Bot,
   CircleAlert,
   Cpu,
   ExternalLink,
   Keyboard,
-  Layers,
   Play,
   Plus,
   RefreshCw,
@@ -92,7 +90,7 @@ export function Welcome({
         </div>
         {c === "unreachable" ? (
           <p className="mt-2 text-secondary text-muted">
-            Start TrueForge locally with <code className="rounded-sm bg-raised px-1 font-mono text-fg">npx @truefoundry/trueforge@latest</code>, then check again.
+            Run <code className="rounded-sm bg-raised px-1 font-mono text-fg">npx @truefoundry/trueforge@latest</code>, then check again.
           </p>
         ) : null}
         <div className="mt-2.5 flex gap-1.5">
@@ -138,21 +136,15 @@ export function Welcome({
         Start new agent session
       </Button>
 
-      <div className="mt-1 grid grid-cols-2 gap-2 text-meta text-muted">
-        <div className="flex items-center gap-1.5 rounded border border-border-subtle p-2">
+      <div className="mt-1 flex flex-col gap-1.5 text-secondary text-muted">
+        <p className="flex items-center gap-2">
           <Wand2 size={13} className="text-accent" aria-hidden /> Inline edit <Kbd>Ctrl</Kbd>
           <Kbd>Alt</Kbd>
           <Kbd>K</Kbd>
-        </div>
-        <div className="flex items-center gap-1.5 rounded border border-border-subtle p-2">
-          <Layers size={13} className="text-info" aria-hidden /> <Kbd>@</Kbd> add context
-        </div>
-        <div className="flex items-center gap-1.5 rounded border border-border-subtle p-2">
-          <ShieldCheck size={13} className="text-success" aria-hidden /> Nothing writes until you apply
-        </div>
-        <div className="flex items-center gap-1.5 rounded border border-border-subtle p-2">
-          <BookOpen size={13} className="text-muted" aria-hidden /> Docs in README
-        </div>
+        </p>
+        <p className="flex items-center gap-2">
+          <ShieldCheck size={13} className="text-success" aria-hidden /> Nothing is written until you apply
+        </p>
       </div>
     </div>
   );
@@ -196,7 +188,7 @@ export function ModelConfigPanel({
               Test connection
             </Button>
             <Button size="sm" variant="ghost" icon={ExternalLink}>
-              TrueForge Settings → Models
+              Models in TrueForge
             </Button>
           </div>
         </Card>
@@ -241,7 +233,7 @@ export function ModelConfigPanel({
 
         <Card title="Retry policy" icon={ShieldCheck}>
           <p className="text-secondary text-fg">3 attempts · exponential backoff with jitter · stall timeout 45 s</p>
-          <p className="mt-1 text-meta text-muted">Auth and config errors skip retries and go straight to the next fallback. A failed run never writes to disk.</p>
+          <p className="mt-1 text-meta text-muted">Auth errors skip retries and go to the next fallback. A failed run never writes to disk.</p>
         </Card>
 
         {model.lastFailure ? (

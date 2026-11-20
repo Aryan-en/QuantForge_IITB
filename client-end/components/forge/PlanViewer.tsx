@@ -52,14 +52,13 @@ export function PlanStep({ step, index, onOpenFile }: { step: Step; index: numbe
 
 export function PlanViewer({ steps, ignoredInvalid, onOpenFile }: { steps: Step[]; ignoredInvalid: boolean; onOpenFile: (path: string) => void }) {
   if (steps.length === 0) {
-    return <EmptyState icon={ListChecks} title="No plan yet" body="Agents plan non-trivial tasks before editing. The plan comes from the agent's update_plan tool." />;
+    return <EmptyState icon={ListChecks} title="No plan yet" body="The agent's plan appears here for multi-step tasks." />;
   }
   const done = steps.filter((s) => s.status === "done").length;
   return (
     <div className="p-3">
       <div className="mb-3 flex items-center gap-2">
         <ListChecks size={14} className="text-muted" aria-hidden />
-        <span className="text-secondary text-muted">From update_plan</span>
         <span className="tabular ml-auto text-secondary text-fg">
           {done}/{steps.length} done
         </span>

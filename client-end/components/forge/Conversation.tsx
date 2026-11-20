@@ -272,7 +272,7 @@ export function ApprovalCard({
               <Button variant="primary" size="sm" icon={GitPullRequest} onClick={onOpenReview}>
                 Review changes
               </Button>
-              <span className="text-meta text-muted">TrueForge is paused until you apply or reject.</span>
+              <span className="text-meta text-muted">Paused until you decide.</span>
             </>
           ) : (
             <>
@@ -282,7 +282,6 @@ export function ApprovalCard({
               <Button variant="secondary" size="sm" icon={X} onClick={() => onDecide(approval.callId, "deny")}>
                 Deny
               </Button>
-              <span className="text-meta text-faint">Sent to TrueForge as user.tool_approval</span>
             </>
           )
         ) : (

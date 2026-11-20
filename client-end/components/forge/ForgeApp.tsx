@@ -3,7 +3,7 @@
 import { Activity, Bot, GitCompare, Layers, ListChecks } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Chip";
-import { EmptyState, Kbd } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/misc";
 import { TabPanel, Tabs, type TabItem } from "@/components/ui/Tabs";
 import { cn } from "@/lib/cn";
 import { useForge } from "@/lib/host/ForgeProvider";
@@ -17,6 +17,8 @@ import { DiffReview } from "./DiffReview";
 import { ExecutionTimeline } from "./ExecutionTimeline";
 import { Header } from "./Header";
 import { ModelConfigPanel, SettingsPanel, Welcome } from "./Panels";
+import { ReviewBar } from "./ReviewBar";
+import { ShortcutsDialog } from "./ShortcutsDialog";
 import { PlanViewer } from "./PlanViewer";
 import { StatusStrip } from "./StatusStrip";
 
@@ -29,7 +31,7 @@ const WIDE = 700;
  * AppShell (Ui-regitry §C.2 / E.2). Narrow: header · tabs · body · status · composer.
  * Wide (≥ 700 px, editor-area panel): conversation left, Context/Plan/Review/Timeline right.
  */
-export function ForgeApp({ mentionSource = [], forceWelcome }: { mentionSource?: MentionCandidate[]; forceWelcome?: boolean }) {
+export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { mentionSource?: MentionCandidate[]; forceWelcome?: boolean; initialDraft?: string }) {
   const { state, actions } = useForge();
   const rootRef = useRef<HTMLDivElement>(null);
   const width = useElementWidth(rootRef);
@@ -40,6 +42,7 @@ export function ForgeApp({ mentionSource = [], forceWelcome }: { mentionSource?:
   const [tab, setTab] = useState<TabId>("agent");
   const [sideTab, setSideTab] = useState<Exclude<TabId, "agent">>("context");
   const [announcement, setAnnouncement] = useState("");
+  const [showShortcuts, setShowShortcuts] = useState(false);
 
   const { app, review } = state;
   const turn = app.turn;
@@ -81,6 +84,12 @@ export function ForgeApp({ mentionSource = [], forceWelcome }: { mentionSource?:
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.ctrlKey || e.metaKey;
+      const t = e.target as HTMLElement | null;
+      const typing = t?.tagName === "TEXTAREA" || t?.tagName === "INPUT" || t?.isContentEditable;
+      if (e.key === "?" && !typing) {
+        e.preventDefault();
+        setShowShortcuts(true);
+      }
       if (mod && e.key === ".") {
         e.preventDefault();
         actions.cancelTurn();
@@ -138,25 +147,22 @@ export function ForgeApp({ mentionSource = [], forceWelcome }: { mentionSource?:
         <EmptyState
           icon={Bot}
           title="What should FORGE build?"
-          body={
-            <>
-              Describe the outcome — FORGE finds the files, plans, edits and verifies. Every change waits for your review. Inline edit: select code, <Kbd>Ctrl</Kbd>
-              <Kbd>Alt</Kbd>
-              <Kbd>K</Kbd>.
-            </>
-          }
+          body="Describe the outcome. FORGE finds the files, makes the change and shows it for review."
         />
       }
     />
   );
 
+  const openReview = () => (wide ? setSideTab("review") : setTab("review"));
   const composer = (
     <>
+      {!reviewVisible && !running ? <ReviewBar queue={review} onOpen={openReview} /> : null}
       <StatusStrip turn={turn} />
       <Composer
         running={running}
         cancelling={turn.status === "cancelling"}
         mentionSource={mentionSource}
+        initialText={initialDraft}
         disabled={app.connection.status !== "connected"}
         disabledReason="Connect to TrueForge to start"
         onSubmit={(text, mentions) => {
@@ -242,6 +248,8 @@ export function ForgeApp({ mentionSource = [], forceWelcome }: { mentionSource?:
           )}
         </>
       )}
+
+      {showShortcuts ? <ShortcutsDialog onClose={() => setShowShortcuts(false)} /> : null}
 
       {state.toast ? (
         <div className="pointer-events-none absolute inset-x-0 bottom-24 z-40 flex justify-center px-3">

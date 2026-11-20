@@ -27,6 +27,7 @@ export function Composer({
   onSubmit,
   onStop,
   placeholder = "Describe a task. Type @ to add files or symbols.",
+  initialText = "",
 }: {
   running: boolean;
   cancelling: boolean;
@@ -36,8 +37,9 @@ export function Composer({
   onSubmit: (text: string, mentions: Mention[]) => void;
   onStop: () => void;
   placeholder?: string;
+  initialText?: string;
 }) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(initialText);
   const [mentions, setMentions] = useState<Mention[]>([]);
   const [query, setQuery] = useState<string | null>(null);
   const [highlight, setHighlight] = useState(0);

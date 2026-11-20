@@ -12,7 +12,7 @@
   --forge-border-subtle: color-mix(in srgb, var(--forge-border) 50%, transparent);
   --forge-text: var(--vscode-foreground, #e6e9ee);
   --forge-text-muted: var(--vscode-descriptionForeground, #a3acb9);
-  --forge-text-faint: #6e7886;
+  --forge-text-faint: #8590a0;
   --forge-accent: #f5792a;
   --forge-accent-hover: #ff8f4a;
   --forge-accent-fg: #1a0e05;
@@ -55,7 +55,7 @@ body.vscode-light,
   --forge-border: #d0d7de;
   --forge-text: #1f2328;
   --forge-text-muted: #57606a;
-  --forge-text-faint: #8c959f;
+  --forge-text-faint: #66707b;
   --forge-accent: #c2510f;
   --forge-accent-hover: #a8430a;
   --forge-accent-fg: #ffffff;

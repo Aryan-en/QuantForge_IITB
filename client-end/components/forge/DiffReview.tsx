@@ -18,7 +18,7 @@ import {
 import { useState, type KeyboardEvent } from "react";
 import { Button, IconButton } from "@/components/ui/Button";
 import { Chip, type Tone } from "@/components/ui/Chip";
-import { EmptyState, Kbd } from "@/components/ui/misc";
+import { EmptyState } from "@/components/ui/misc";
 import { cn } from "@/lib/cn";
 import { basename, dirname, pluralize } from "@/lib/format";
 import type { FileChange, Hunk, HunkState, ReviewQueueState } from "@/lib/protocol";
@@ -45,9 +45,9 @@ const STATE_LABEL: Record<HunkState, string> = {
 };
 
 const ORIGIN_LABEL: Record<NonNullable<ReviewQueueState["origin"]>, string> = {
-  review_gate: "TrueForge review gate · submit_changes",
-  local_review: "Local review (agent ended without submit_changes)",
-  cancelled_turn: "From cancelled turn — nothing was written",
+  review_gate: "Review gate · submit_changes",
+  local_review: "Local review",
+  cancelled_turn: "From cancelled turn",
   inline_edit: "Inline edit",
 };
 
@@ -65,7 +65,7 @@ export function DiffReview({ queue, onHunk, onFile, onBulk, onOpenDiff, compact 
   const [confirmRejectAll, setConfirmRejectAll] = useState(false);
 
   if (queue.files.length === 0 && !queue.lastApplied) {
-    return <EmptyState icon={GitCompare} title="Nothing to review" body="When the agent proposes edits they land here first. Nothing touches disk until you apply." />;
+    return <EmptyState icon={GitCompare} title="Nothing to review" body="Proposed edits appear here before anything is written." />;
   }
 
   const decided = s.accepted + s.rejected;
@@ -170,9 +170,6 @@ export function DiffReview({ queue, onHunk, onFile, onBulk, onOpenDiff, compact 
           <FileDiffRow key={f.proposalId} file={f} onHunk={onHunk} onFile={onFile} onOpenDiff={onOpenDiff} compact={compact} />
         ))}
       </ul>
-      <p className="flex items-center gap-1.5 px-3 pb-3 text-meta text-faint">
-        Focus a hunk: <Kbd>A</Kbd> accept <Kbd>R</Kbd> reject · <Kbd>Ctrl</Kbd>+<Kbd>↵</Kbd> apply
-      </p>
     </div>
   );
 }

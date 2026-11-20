@@ -42,3 +42,7 @@ next-env.d.ts
 
 # webview bundle
 /dist/
+
+# playwright
+/test-results/
+/playwright-report/

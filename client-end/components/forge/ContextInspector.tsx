@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, Ban, Braces, ChevronRight, Eye, FileText, Layers, Plus, Search } from "lucide-react";
+import { AtSign, Ban, Braces, ChevronRight, Eye, Layers, Plus, Search } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Chip, type Tone } from "@/components/ui/Chip";
@@ -133,7 +133,7 @@ export function ContextInspector({
       <EmptyState
         icon={Layers}
         title="No context yet"
-        body="Context appears here once the agent starts looking at your code. Type @ to add files or symbols yourself."
+        body="Files the agent selects appear here, with reasons and token budget."
       />
     );
   }
@@ -202,9 +202,6 @@ export function ContextInspector({
           ) : null}
         </>
       ) : null}
-      <p className="flex items-center gap-1.5 px-3 pt-3 text-meta text-faint">
-        <FileText size={11} aria-hidden /> Click a row to open it in the editor.
-      </p>
     </div>
   );
 }

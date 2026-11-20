@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FORGE — UI harness",
-  description: "FORGE webview UI running against a scripted mock host (component harness, not the product).",
+  title: "FORGE",
+  description: "Think. Understand. Engineer. Verify.",
 };
 
 // No next/font here: the shared UI uses the VS Code / system font stack so it matches the webview (ADR-009).

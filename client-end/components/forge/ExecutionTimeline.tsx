@@ -98,11 +98,14 @@ export function TimelineRow({ event, startAt }: { event: TimelineEvent; startAt:
 
 export function ExecutionTimeline({ events, onOpenInTrueForge, sessionId }: { events: TimelineEvent[]; onOpenInTrueForge: () => void; sessionId: string | null }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [showAll, setShowAll] = useState(false);
   const visible = useMemo(() => events.filter((e) => matches(e, filter)), [events, filter]);
   const startAt = events[0]?.at ?? 0;
+  const CAP = 300; // keeps very long runs responsive; earlier rows are one click away
+  const shown = showAll ? visible : visible.slice(-CAP);
   const toolCount = events.filter((e) => e.kind === "tool.call").length;
 
-  if (events.length === 0) return <EmptyState icon={Activity} title="No activity yet" body="Every model call, tool call, approval and retry appears here in order." />;
+  if (events.length === 0) return <EmptyState icon={Activity} title="No activity yet" body="Model calls, tool calls and approvals appear here." />;
 
   return (
     <div className="flex flex-col">
@@ -135,7 +138,14 @@ export function ExecutionTimeline({ events, onOpenInTrueForge, sessionId }: { ev
         </div>
       </div>
       <ol className="flex flex-col px-2 py-2" role="list" aria-label="Execution timeline">
-        {visible.map((e) => (
+        {shown.length < visible.length ? (
+          <li className="pb-1 pl-6">
+            <Button size="sm" variant="ghost" onClick={() => setShowAll(true)}>
+              Show {visible.length - shown.length} earlier events
+            </Button>
+          </li>
+        ) : null}
+        {shown.map((e) => (
           <TimelineRow key={e.id} event={e} startAt={startAt} />
         ))}
       </ol>
