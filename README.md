@@ -271,3 +271,14 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 
 - [TrueFoundry](https://www.truefoundry.com/) for TrueForge and the Forge-a-thon; [Techfest, IIT Bombay](https://techfest.org/) for hosting.
 - Open-source projects QuantForge builds on or is informed by: TrueForge, Model Context Protocol, VS Code, Tree-sitter, ripgrep, SQLite, React, Next.js, Tailwind CSS, shadcn/ui, Lucide, jsdiff, esbuild, Vitest, Playwright; and the editor-agent community projects (Cline, Continue, Roo Code, opencode) whose public work set the bar — none of their code is used.
+
+## Docker (backend only)
+Runs the headless editor-tool MCP server and TrueForge as containers. The VS Code extension still runs its own in-process tool server; this stack is for headless, CI and evaluation use.
+```bash
+export QF_MCP_TOKEN=$(openssl rand -hex 24)
+WORKSPACE=/path/to/repo docker compose up --build     # TF_PORT=18790 to change the host port
+```
+- TrueForge UI: http://localhost:8790 → add your provider and API key there (keys never go in compose files).
+- The tool server stays loopback-only with bearer-token auth; TrueForge shares its network namespace (`network_mode: service:mcp`), so nothing else can reach it.
+- The tool server runs verification with the image's Python + pytest. A host virtualenv (for example a macOS venv) will not work inside the Linux container; install your project's dependencies into the image if verification needs them.
+- A model on your host (Ollama) is reachable from TrueForge at `http://host.docker.internal:11434/v1`.

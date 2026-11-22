@@ -1,8 +1,17 @@
 /* Headless runner: serves QuantForge's editor tools over MCP for a workspace folder, with no VS Code involved.
  * Used for local development, CI and the Flask evaluation harness. Prints the URL + token as JSON on stdout. */
 import path from "node:path";
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { setRgPath, setWasmDir } from "@forge/context-engine";
 import { createToolContext } from "./runtime.js";
 import { startForgeMcpHttp } from "./server.js";
+
+// When shipped as a bundle (extension dist/ or the Docker image) the ripgrep binary and Tree-sitter wasm sit next to this file.
+const here = path.dirname(fileURLToPath(import.meta.url));
+const bundledRg = path.join(here, "bin", process.platform === "win32" ? "rg.exe" : "rg");
+if (fs.existsSync(bundledRg)) setRgPath(bundledRg);
+if (fs.existsSync(path.join(here, "wasm"))) setWasmDir(path.join(here, "wasm"));
 
 function arg(name: string, def?: string): string | undefined {
   const i = process.argv.indexOf(`--${name}`);

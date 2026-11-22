@@ -1,0 +1,9 @@
+node_modules
+**/node_modules
+**/dist
+.git
+eval/work
+client-end
+*.vsix
+.vscode-test
+coverage

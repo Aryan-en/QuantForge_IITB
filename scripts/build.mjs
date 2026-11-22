@@ -22,7 +22,7 @@ const common = {
 await build({ ...common, entryPoints: [path.join(ext, "src/extension.ts")], outfile: path.join(ext, "dist/extension.cjs"), external: ["vscode"] });
 await build({ ...common, format: "esm", entryPoints: [path.join(root, "packages/editor-mcp/src/cli.ts")], outfile: path.join(ext, "dist/forge-mcp.mjs"),
   define: { "import.meta.url": "import.meta.url" },
-  banner: { js: 'import { createRequire as __cr } from "node:module"; const require = __cr(import.meta.url);' }, alias: {} });
+  banner: { js: 'import { createRequire as __cr } from "node:module"; const require = __cr(import.meta.url);' }, alias: { "@vscode/ripgrep": path.join(ext, "build/rg-stub.mjs") } });
 
 const wasmSrc = path.dirname(require.resolve("@vscode/tree-sitter-wasm"));
 // tree-sitter.js is UMD and needs __filename: ship it as .cjs so a "type":"module" package.json cannot make Node load it as ESM.
