@@ -1,5 +1,5 @@
 {
-  "_comment": "Example FORGE settings. Copy these keys into your VS Code settings.json (user or workspace). NO credentials belong here: model providers and API keys are configured inside TrueForge (Settings -> Models), never in FORGE.",
+  "_comment": "Example QuantForge settings. Copy these keys into your VS Code settings.json (user or workspace). NO credentials belong here: model providers and API keys are configured inside TrueForge (Settings -> Models), never in QuantForge.",
   "forge.trueforge.baseUrl": "http://localhost:8790",
   "forge.model.primary": "<provider/model exactly as listed in TrueForge, e.g. a catalog model or a custom OpenAI-compatible endpoint>",
   "forge.model.fallbacks": ["<second provider/model as listed in TrueForge>"],

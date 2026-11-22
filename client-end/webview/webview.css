@@ -2,7 +2,7 @@
 @import "../styles/tokens.css";
 @import "../styles/forge.css";
 
-/* VS Code adds body padding to webviews; FORGE fills the view edge to edge. No inline styles (strict CSP). */
+/* VS Code adds body padding to webviews; QuantForge fills the view edge to edge. No inline styles (strict CSP). */
 html,
 body,
 #root {

@@ -1,5 +1,5 @@
 {
-  "x-description": "FORGE inline-edit agent: single-file, selection-scoped edit. Same MCP server, restricted tools, short iteration limit, no subagents.",
+  "x-description": "QuantForge inline-edit agent: single-file, selection-scoped edit. Same MCP server, restricted tools, short iteration limit, no subagents.",
   "model": {
     "name": "REPLACED_AT_RUNTIME",
     "params": {

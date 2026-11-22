@@ -1,5 +1,5 @@
 /**
- * Adapter between the FORGE extension host (packages/extension/src/controller.ts) and this UI.
+ * Adapter between the QuantForge extension host (packages/extension/src/controller.ts) and this UI.
  *
  * The extension speaks the wire format in packages/protocol: flat messages, one full `state.snapshot`
  * per change, coalesced `stream.delta`s and `mention.results`. The UI renders from incremental events

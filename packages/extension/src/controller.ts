@@ -62,7 +62,7 @@ export class ForgeController implements vscode.Disposable {
 
   async init(): Promise<void> {
     const root = this.root();
-    if (!root) { this.notice({ level: "warn", title: "Open a folder", message: "FORGE works on the folder open in the editor." }); return; }
+    if (!root) { this.notice({ level: "warn", title: "Open a folder", message: "QuantForge works on the folder open in the editor." }); return; }
     const storage = path.join(this.ext.globalStorageUri.fsPath, createHash("sha1").update(root.fsPath).digest("hex").slice(0, 12));
     const pyBin = cfg("agent.pythonBin", "");
     this.tool = await createToolContext({
@@ -90,7 +90,7 @@ export class ForgeController implements vscode.Disposable {
     const probe = await parseFile("probe.py", "def f():\n    pass\n", { size: 1, mtimeMs: 1 });
     if (probe.symbols.length === 0) {
       this.log(`symbol analysis unavailable: ${getLastParserError() ?? "unknown"}`);
-      this.state.notice = { level: "warn", title: "Symbol analysis unavailable", message: "Code search still works, but symbol-aware ranking and find_symbol are degraded. See the FORGE output channel." };
+      this.state.notice = { level: "warn", title: "Symbol analysis unavailable", message: "Code search still works, but symbol-aware ranking and find_symbol are degraded. See the QuantForge output channel." };
     }
     // Optional persistent symbol index (SQLite FTS5 via node:sqlite) with incremental updates from a file watcher.
     if (cfg("index.persistent", true)) {
@@ -136,8 +136,8 @@ export class ForgeController implements vscode.Disposable {
     const rep = await this.tool.review.reconcile();
     if (rep.committed.length || rep.partial.length || rep.rolledBack.length) {
       this.log(`journal reconcile: ${JSON.stringify(rep)}`);
-      if (rep.partial.length) void vscode.window.showWarningMessage(`FORGE was interrupted while applying changes. ${rep.partial.map((p) => `${p.applied.length} file(s) were written (undoable), ${p.untouched.length} untouched`).join("; ")}.`);
-      else if (rep.committed.length) void vscode.window.showInformationMessage("FORGE recovered an interrupted apply: the changes were written and can be undone.");
+      if (rep.partial.length) void vscode.window.showWarningMessage(`QuantForge was interrupted while applying changes. ${rep.partial.map((p) => `${p.applied.length} file(s) were written (undoable), ${p.untouched.length} untouched`).join("; ")}.`);
+      else if (rep.committed.length) void vscode.window.showInformationMessage("QuantForge recovered an interrupted apply: the changes were written and can be undone.");
     }
     try {
       const saved = JSON.parse(await fsp.readFile(this.storageFile, "utf8")) as Persisted;
@@ -149,7 +149,7 @@ export class ForgeController implements vscode.Disposable {
       if (saved.queue) await this.tool.review.restore(saved.queue as never);
       this.tool.review.clearSettled();
       if (saved.status === "running" && saved.sessionId && saved.turnId) {
-        void vscode.window.showInformationMessage("FORGE was working on a task when the window closed.", "Resume", "Discard").then(async (pick) => {
+        void vscode.window.showInformationMessage("QuantForge was working on a task when the window closed.", "Resume", "Discard").then(async (pick) => {
           if (pick === "Resume") await this.resumeTask();
           else if (pick === "Discard") { this.tool.review.discardAll(); await this.persist({ status: "idle", turnId: null }); this.push(); }
         });
@@ -185,7 +185,7 @@ export class ForgeController implements vscode.Disposable {
     }
   }
 
-  /** Probe TrueForge and (re)register FORGE's loopback MCP server in it. Never throws. */
+  /** Probe TrueForge and (re)register QuantForge's loopback MCP server in it. Never throws. */
   async checkConnection(): Promise<void> {
     if (!this.srv) return;
     const url = cfg("trueforge.baseUrl", "http://localhost:8790");
@@ -198,14 +198,14 @@ export class ForgeController implements vscode.Disposable {
       this.setConnection("ok");
     } catch (e) {
       this.setConnection("ok");
-      this.notice({ level: "error", title: "Could not register FORGE tools in TrueForge", message: (e as Error).message, action: { label: "Start TrueForge correctly", command: "forge.startTrueForge" } });
+      this.notice({ level: "error", title: "Could not register QuantForge tools in TrueForge", message: (e as Error).message, action: { label: "Start TrueForge correctly", command: "forge.startTrueForge" } });
     }
     this.state.model = cfg("model.primary", "");
     this.push();
   }
   private setConnection(c: "ok" | "down", why?: string): void {
     this.state.connection = c;
-    if (c === "down") this.notice({ level: "error", title: "TrueForge is not reachable", message: `${why ?? ""} Start it with “FORGE: Start TrueForge” and check forge.trueforge.baseUrl.`, action: { label: "Start TrueForge", command: "forge.startTrueForge" } });
+    if (c === "down") this.notice({ level: "error", title: "TrueForge is not reachable", message: `${why ?? ""} Start it with “QuantForge: Start TrueForge” and check forge.trueforge.baseUrl.`, action: { label: "Start TrueForge", command: "forge.startTrueForge" } });
     this.push();
   }
 
@@ -277,11 +277,11 @@ export class ForgeController implements vscode.Disposable {
     else if (action === "apply") {
       const rep = await this.tool.review.apply({ rejectUndecided: true });
       this.tool.review.clearSettled();
-      vscode.window.setStatusBarMessage(rep.ok ? `FORGE: applied ${rep.filesChanged.length} file(s) — undo with “FORGE: Undo Last Applied Batch”` : "FORGE: applying failed; nothing was changed", 6000);
+      vscode.window.setStatusBarMessage(rep.ok ? `QuantForge: applied ${rep.filesChanged.length} file(s) — undo with “QuantForge: Undo Last Applied Batch”` : "QuantForge: applying failed; nothing was changed", 6000);
     } else if (action === "undo") {
       const u = await this.tool.review.undo();
-      if (!u.ok) void vscode.window.showWarningMessage(u.conflicts.length ? `Cannot undo: ${u.conflicts.join(", ")} changed since FORGE applied it.` : "Nothing to undo.");
-      else vscode.window.setStatusBarMessage(`FORGE: restored ${u.restored.length} file(s)`, 5000);
+      if (!u.ok) void vscode.window.showWarningMessage(u.conflicts.length ? `Cannot undo: ${u.conflicts.join(", ")} changed since QuantForge applied it.` : "Nothing to undo.");
+      else vscode.window.setStatusBarMessage(`QuantForge: restored ${u.restored.length} file(s)`, 5000);
     }
     void this.persist();
     this.push();
@@ -336,7 +336,7 @@ export class ForgeController implements vscode.Disposable {
     // Render the proposal in the editor itself: native side-by-side diff (left pane is the real file, so the per-hunk CodeLens is there too).
     if (first && root) await openDiff(this.tool.review, first.id, root);
     this.lens.refresh();
-    const pick = await vscode.window.showInformationMessage(`FORGE proposes changes to ${this.tool.review.list().map((p) => p.path).join(", ")}. Use Accept/Reject above each hunk, then apply.`, "Accept all & apply", "Apply accepted", "Reject all");
+    const pick = await vscode.window.showInformationMessage(`QuantForge proposes changes to ${this.tool.review.list().map((p) => p.path).join(", ")}. Use Accept/Reject above each hunk, then apply.`, "Accept all & apply", "Apply accepted", "Reject all");
     if (!this.pending || this.pending.call.callId !== call.callId) return;
     if (pick === "Accept all & apply") { this.tool.review.decideAll("accept"); this.decideApproval(call.callId, "allow"); }
     else if (pick === "Apply accepted") this.decideApproval(call.callId, "allow");
@@ -349,7 +349,7 @@ export class ForgeController implements vscode.Disposable {
     this.log("cancel requested");
     this.timeline({ kind: "turn.done", title: "cancelling…", status: "running" });
     this.abort.abort();
-    this.tool.cancel.cancel("user pressed Stop"); // TrueForge waits for running MCP calls, so FORGE aborts its own
+    this.tool.cancel.cancel("user pressed Stop"); // TrueForge waits for running MCP calls, so QuantForge aborts its own
     this.pending?.resolve({ status: "deny", reason: "cancelled" });
     this.pending = null;
     this.state.approval = null;
@@ -357,9 +357,9 @@ export class ForgeController implements vscode.Disposable {
   }
 
   async runTask(rawText: string, mode: "agent" | "inline", inlineHeader = ""): Promise<void> {
-    if (!this.tool) { await vscode.window.showWarningMessage("Open a folder to use FORGE."); return; }
+    if (!this.tool) { await vscode.window.showWarningMessage("Open a folder to use QuantForge."); return; }
     if (this.state.running) return;
-    if (!vscode.workspace.isTrusted) { this.notice({ level: "warn", title: "Workspace not trusted", message: "FORGE is read-only in untrusted workspaces." }); return; }
+    if (!vscode.workspace.isTrusted) { this.notice({ level: "warn", title: "Workspace not trusted", message: "QuantForge is read-only in untrusted workspaces." }); return; }
     const primary = cfg("model.primary", "").trim();
     if (!primary) { this.notice({ level: "error", title: "No model selected", message: "Set forge.model.primary to a model configured in TrueForge (Settings → Models), e.g. “openai/gpt-…”.", action: { label: "Open settings", command: "forge.openSettings" } }); return; }
     const models = [primary, ...cfg<string[]>("model.fallbacks", []).filter((m) => m && m !== primary)];
@@ -374,7 +374,7 @@ export class ForgeController implements vscode.Disposable {
     } catch { /* keep previous limits */ }
 
     const { mentions, text } = parseMentions(rawText);
-    const prompt = `${inlineHeader}${text}${mentions.length ? `\n\n[FORGE mentions — pass these as \`mentions\` to get_context]\n${JSON.stringify(mentions)}` : ""}`;
+    const prompt = `${inlineHeader}${text}${mentions.length ? `\n\n[QuantForge mentions — pass these as \`mentions\` to get_context]\n${JSON.stringify(mentions)}` : ""}`;
     const specs = new Map<string, AgentSpec>();
     try {
       for (const m of models) specs.set(m, (await loadAgent(path.join(this.ext.extensionPath, "agents"), mode === "agent" ? "forge-agent" : "forge-inline-edit", { model: m })).spec);

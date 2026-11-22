@@ -64,7 +64,7 @@ export async function runResilient(api: TrueForgeApi, o: ResilientRunOptions): P
       continue;
     }
     result.sessionId = sessionId;
-    const handoff = mi > 0 && o.describeProgress ? `\n\n[FORGE handoff] A previous model failed on this task. ${o.describeProgress()}` : "";
+    const handoff = mi > 0 && o.describeProgress ? `\n\n[QuantForge handoff] A previous model failed on this task. ${o.describeProgress()}` : "";
     let attempt = 0;
     for (;;) {
       if (o.signal?.aborted) return { ...result, outcome: { status: "cancelled", turnId: "", sessionId, text: "", cancelReason: "client-cancelled" }, modelUsed: model };

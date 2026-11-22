@@ -77,7 +77,7 @@ export function Welcome({
         <div className="grid size-10 place-items-center rounded-lg border border-accent/40 bg-accent-soft text-accent">
           <ForgeMark className="size-5" />
         </div>
-        <h1 className="text-title font-semibold tracking-tight text-fg">FORGE</h1>
+        <h1 className="text-title font-semibold tracking-tight text-fg">QuantForge</h1>
         <p className="text-body text-muted">Think. Understand. Engineer. Verify.</p>
       </div>
 
@@ -119,7 +119,7 @@ export function Welcome({
             </p>
           </>
         ) : (
-          <p className="text-secondary text-muted">No model configured. Models and keys live in TrueForge — FORGE stores model names only.</p>
+          <p className="text-secondary text-muted">No model configured. Models and keys live in TrueForge — QuantForge stores model names only.</p>
         )}
         <Button size="sm" variant="ghost" icon={ExternalLink} className="mt-2" onClick={onOpenModel}>
           Model configuration
@@ -185,7 +185,7 @@ export function ModelConfigPanel({
             <span className="ml-auto text-meta text-muted">{MODEL_TEXT[model.status]}</span>
           </div>
           <p className="mt-1 text-meta text-muted">
-            Primary <span className="font-mono">{model.primary ?? "—"}</span> · configured in TrueForge. FORGE never shows or stores API keys.
+            Primary <span className="font-mono">{model.primary ?? "—"}</span> · configured in TrueForge. QuantForge never shows or stores API keys.
           </p>
           <div className="mt-2 flex gap-1.5">
             <Button size="sm" variant="secondary" icon={RefreshCw} onClick={onTest} loading={model.status === "checking"}>
@@ -254,7 +254,7 @@ export function ModelConfigPanel({
           <Card title="Last failure" icon={CircleAlert}>
             <p className="font-mono text-secondary text-fg">{model.lastFailure.code}</p>
             <p className="text-meta text-muted">
-              FORGE {model.lastFailure.action === "fell_back" ? "fell back to the next model" : model.lastFailure.action === "retried" ? "retried" : "stopped and showed an error"}.
+              QuantForge {model.lastFailure.action === "fell_back" ? "fell back to the next model" : model.lastFailure.action === "retried" ? "retried" : "stopped and showed an error"}.
             </p>
           </Card>
         ) : null}
@@ -339,7 +339,7 @@ export function SettingsPanel({ settings, onBack, onChange }: { settings: ForgeS
           <dl className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1.5 text-secondary">
             {[
               ["Inline edit", ["Ctrl", "Alt", "K"]],
-              ["Open FORGE", ["Ctrl", "Alt", "F"]],
+              ["Open QuantForge", ["Ctrl", "Alt", "F"]],
               ["Stop", ["Esc"]],
               ["Accept / reject hunk", ["A", "R"]],
               ["Apply accepted", ["Ctrl", "↵"]],

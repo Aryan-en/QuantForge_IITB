@@ -1,6 +1,6 @@
 /*
- * FORGE design tokens — Ui-regitry.md §B.1.
- * Host layer (VS Code theme vars) → FORGE semantic tokens → Tailwind aliases (app/globals.css).
+ * QuantForge design tokens — Ui-regitry.md §B.1.
+ * Host layer (VS Code theme vars) → QuantForge semantic tokens → Tailwind aliases (app/globals.css).
  * Standalone values apply in the Next.js harness, where no --vscode-* vars exist.
  */
 :root {

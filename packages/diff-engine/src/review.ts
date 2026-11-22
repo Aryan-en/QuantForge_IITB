@@ -314,7 +314,7 @@ export class ReviewQueue {
     return this.journal.reconcile((p) => this.store.read(p), contentHash);
   }
 
-  /** Revert a batch only if every touched file still equals what FORGE wrote (never clobbers later edits). */
+  /** Revert a batch only if every touched file still equals what QuantForge wrote (never clobbers later edits). */
   async undo(batchId?: string): Promise<UndoReport> {
     const id = batchId ?? this.lastBatchId ?? this.journal.last()?.batchId;
     const batch = id ? this.journal.get(id) : undefined;

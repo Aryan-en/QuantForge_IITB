@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-// Teach tailwind-merge about FORGE's custom font-size tokens so `text-body` and `text-fg`
+// Teach tailwind-merge about QuantForge's custom font-size tokens so `text-body` and `text-fg`
 // are not treated as conflicting classes.
 const twMerge = extendTailwindMerge({
   extend: {

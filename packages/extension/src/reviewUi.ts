@@ -42,7 +42,7 @@ export class ReviewLensProvider implements vscode.CodeLensProvider {
       const line = Math.min(doc.lineCount - 1, Math.max(0, h.oldStart + h.lead));
       const range = new vscode.Range(line, 0, line, 0);
       const tag = state === "accepted" ? "✓ accepted" : state === "rejected" ? "✗ rejected" : state === "conflicted" ? "⚠ conflict" : state === "stale" ? "↻ file changed" : `+${h.added} −${h.removed}`;
-      lenses.push(new vscode.CodeLens(range, { title: `FORGE ${tag}`, command: "" }));
+      lenses.push(new vscode.CodeLens(range, { title: `QuantForge ${tag}`, command: "" }));
       lenses.push(new vscode.CodeLens(range, { title: "Accept", command: "forge.hunk.accept", arguments: [p.id, h.id] }));
       lenses.push(new vscode.CodeLens(range, { title: "Reject", command: "forge.hunk.reject", arguments: [p.id, h.id] }));
       lenses.push(new vscode.CodeLens(range, { title: "Diff", command: "forge.hunk.diff", arguments: [p.id] }));
@@ -78,5 +78,5 @@ export async function openDiff(review: ReviewQueue, proposalId: string, root: vs
   const right = vscode.Uri.from({ scheme: PROPOSED_SCHEME, authority: p.id, path: `/${p.path}` });
   const left = vscode.Uri.joinPath(root, p.path);
   if (p.kind === "create") await vscode.commands.executeCommand("vscode.open", right);
-  else await vscode.commands.executeCommand("vscode.diff", left, right, `FORGE: ${p.path} (current ↔ proposed)`);
+  else await vscode.commands.executeCommand("vscode.diff", left, right, `QuantForge: ${p.path} (current ↔ proposed)`);
 }

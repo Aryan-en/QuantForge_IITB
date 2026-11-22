@@ -1,5 +1,5 @@
 {
-  "x-description": "FORGE autonomous multi-file agent. The agent loop runs on TrueForge; editor capabilities come from the forge-editor MCP server hosted by the FORGE extension. model.name is replaced at runtime from the forge.model.primary setting (a TrueForge 'provider/model' name).",
+  "x-description": "QuantForge autonomous multi-file agent. The agent loop runs on TrueForge; editor capabilities come from the forge-editor MCP server hosted by the QuantForge extension. model.name is replaced at runtime from the forge.model.primary setting (a TrueForge 'provider/model' name).",
   "model": {
     "name": "REPLACED_AT_RUNTIME",
     "params": {

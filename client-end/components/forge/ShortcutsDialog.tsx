@@ -7,7 +7,7 @@ import { Kbd } from "@/components/ui/misc";
 
 const ROWS: [string, string[]][] = [
   ["Inline edit", ["Ctrl", "Alt", "K"]],
-  ["Open FORGE", ["Ctrl", "Alt", "F"]],
+  ["Open QuantForge", ["Ctrl", "Alt", "F"]],
   ["Send", ["↵"]],
   ["New line", ["⇧", "↵"]],
   ["Stop", ["Esc"]],

@@ -200,12 +200,12 @@ export function Composer({
           aria-controls={listOpen ? listId : undefined}
           aria-activedescendant={listOpen && results.length ? `${listId}-${highlight}` : undefined}
           aria-autocomplete="list"
-          aria-label="Task for FORGE"
+          aria-label="Task for QuantForge"
           value={text}
           rows={2}
           readOnly={inputDisabled}
           aria-disabled={inputDisabled || undefined}
-          placeholder={running ? "FORGE is working… press Esc to stop." : disabled ? disabledReason : placeholder}
+          placeholder={running ? "QuantForge is working… press Esc to stop." : disabled ? disabledReason : placeholder}
           onChange={(e) => {
             setText(e.target.value);
             updateQuery(e.target.value, e.target.selectionStart);

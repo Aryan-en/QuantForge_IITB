@@ -1,4 +1,4 @@
-/* Registers FORGE's editor tools with a running local TrueForge and lists its models — without VS Code.
+/* Registers QuantForge's editor tools with a running local TrueForge and lists its models — without VS Code.
  * Usage: npm run forge:setup -- --workspace <dir> [--tf http://localhost:8790] [--auto-accept]
  * Keeps the tool server running until Ctrl-C. */
 import path from "node:path";

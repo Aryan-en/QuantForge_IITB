@@ -1,6 +1,6 @@
 {
   "name": "forge",
-  "displayName": "FORGE",
+  "displayName": "QuantForge",
   "description": "Editor-native coding agent. The agent loop runs on TrueForge; every change is reviewed hunk by hunk before it touches disk.",
   "version": "0.1.0",
   "private": true,
@@ -20,7 +20,7 @@
   "capabilities": {
     "untrustedWorkspaces": {
       "supported": "limited",
-      "description": "FORGE is read-only in untrusted workspaces: it will not run commands or apply changes."
+      "description": "QuantForge is read-only in untrusted workspaces: it will not run commands or apply changes."
     }
   },
   "activationEvents": [
@@ -34,7 +34,7 @@
       "activitybar": [
         {
           "id": "forge",
-          "title": "FORGE",
+          "title": "QuantForge",
           "icon": "media/forge.svg"
         }
       ]
@@ -51,71 +51,71 @@
     "commands": [
       {
         "command": "forge.inlineEdit",
-        "title": "FORGE: Inline Edit Selection",
-        "category": "FORGE"
+        "title": "QuantForge: Inline Edit Selection",
+        "category": "QuantForge"
       },
       {
         "command": "forge.openAgent",
-        "title": "FORGE: Open Agent",
-        "category": "FORGE"
+        "title": "QuantForge: Open Agent",
+        "category": "QuantForge"
       },
       {
         "command": "forge.newSession",
-        "title": "FORGE: New Session",
-        "category": "FORGE"
+        "title": "QuantForge: New Session",
+        "category": "QuantForge"
       },
       {
         "command": "forge.cancel",
-        "title": "FORGE: Stop",
-        "category": "FORGE"
+        "title": "QuantForge: Stop",
+        "category": "QuantForge"
       },
       {
         "command": "forge.startTrueForge",
-        "title": "FORGE: Start TrueForge (local mode)",
-        "category": "FORGE"
+        "title": "QuantForge: Start TrueForge (local mode)",
+        "category": "QuantForge"
       },
       {
         "command": "forge.checkConnection",
-        "title": "FORGE: Check TrueForge Connection",
-        "category": "FORGE"
+        "title": "QuantForge: Check TrueForge Connection",
+        "category": "QuantForge"
       },
       {
         "command": "forge.review.acceptAll",
-        "title": "FORGE: Accept All Changes",
-        "category": "FORGE"
+        "title": "QuantForge: Accept All Changes",
+        "category": "QuantForge"
       },
       {
         "command": "forge.review.rejectAll",
-        "title": "FORGE: Reject All Changes",
-        "category": "FORGE"
+        "title": "QuantForge: Reject All Changes",
+        "category": "QuantForge"
       },
       {
         "command": "forge.review.apply",
-        "title": "FORGE: Apply Accepted Changes",
-        "category": "FORGE"
+        "title": "QuantForge: Apply Accepted Changes",
+        "category": "QuantForge"
       },
       {
         "command": "forge.review.undo",
-        "title": "FORGE: Undo Last Applied Batch",
-        "category": "FORGE"
+        "title": "QuantForge: Undo Last Applied Batch",
+        "category": "QuantForge"
       },
       {
         "command": "forge.hunk.accept",
-        "title": "FORGE: Accept Hunk"
+        "title": "QuantForge: Accept Hunk"
       },
       {
         "command": "forge.hunk.reject",
-        "title": "FORGE: Reject Hunk"
+        "title": "QuantForge: Reject Hunk"
       },
       {
         "command": "forge.openSettings",
-        "title": "FORGE: Open Settings",
-        "category": "FORGE"
+        "title": "QuantForge: Open Settings",
+        "category": "QuantForge"
       },
       {
         "command": "forge.resume",
-        "title": "FORGE: Resume Interrupted Task",
-        "category": "FORGE"
+        "title": "QuantForge: Resume Interrupted Task",
+        "category": "QuantForge"
       }
     ],
     "keybindings": [
@@ -147,7 +147,7 @@
       ]
     },
     "configuration": {
-      "title": "FORGE",
+      "title": "QuantForge",
       "properties": {
         "forge.trueforge.baseUrl": {
           "type": "string",

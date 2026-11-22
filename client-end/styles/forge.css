@@ -1,4 +1,4 @@
-/* Base element styles and the few keyframes FORGE uses. Shared by harness and webview. */
+/* Base element styles and the few keyframes QuantForge uses. Shared by harness and webview. */
 html,
 body {
   background: var(--forge-bg);

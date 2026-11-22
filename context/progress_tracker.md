@@ -1,4 +1,4 @@
-# FORGE — Progress Tracker
+# QuantForge — Progress Tracker
 
 > **Rule:** this file records *implementation reality*. A row is COMPLETED only with evidence (a path, a command and its result). Documentation existing for a feature is not evidence.
 > **Frontend location:** `/Users/aryansingh/Documents/QuantForge_IITB/client-end/` (inside this repository). It is **untouched** by design in this phase (owner instruction); see §A "Frontend".
@@ -11,14 +11,14 @@
 
 | Field | Value |
 |---|---|
-| Product | FORGE — editor-native coding agent for VS Code; agent loop on TrueForge |
+| Product | QuantForge — editor-native coding agent for VS Code; agent loop on TrueForge |
 | Current phase | Backend and extension feature-complete for the planned scope and verified with a scripted model **and, for Tasks A and C, a real local model**; remaining: a strong-model Task B pass, independent check of the React UI in VS Code, demo video |
 | Overall completion | **≈ 80 %** of engineering scope (demo artefacts and real-model evidence are the rest) (estimate: mean of milestone completion M0–M10 below; weighted equally) |
 | Last updated | 2026-11-22 |
 | Product code | `packages/{protocol,diff-engine,context-engine,editor-mcp,trueforge-client,extension}`, `agents/`, `scripts/`, `eval/`, `config/` |
 
 ### What "verified" means here — read this
-All end-to-end results below use a **scripted, deterministic fake model** (`packages/trueforge-client/src/testing/fake-model.ts`) behind a **real TrueForge**, real MCP tools, the real Flask 3.1.3 repo and (for the VS Code suite) a real VS Code 1.146.0. They prove FORGE's plumbing, safety and resilience. **No real LLM has been run against Tasks A/B/C yet.** Real-model pass rates, models used and cost are therefore *unknown* and must be measured before the write-up (FORGE-073).
+All end-to-end results below use a **scripted, deterministic fake model** (`packages/trueforge-client/src/testing/fake-model.ts`) behind a **real TrueForge**, real MCP tools, the real Flask 3.1.3 repo and (for the VS Code suite) a real VS Code 1.146.0. They prove QuantForge's plumbing, safety and resilience. **No real LLM has been run against Tasks A/B/C yet.** Real-model pass rates, models used and cost are therefore *unknown* and must be measured before the write-up (FORGE-073).
 
 ### Current blockers and critical risks
 
@@ -212,7 +212,7 @@ Lessons that changed the product (all covered by tests): TrueForge's default 20 
 | TD-05 | CI and provider-import guard | Medium | `.github/workflows/ci.yml`, `guard.test.ts` | guard test fails on planted violation; workflow not yet run on GitHub | IN REVIEW |
 | TD-06 | `client-end` still template (page, metadata, Arial/Geist mismatch, `next/font/google`) | Low | `client-end/` | owner decision | BLOCKED |
 | TD-07 | Case-insensitive FS: `Readme.md` ≡ `README.md` | Low | root | `README.md` canonical | COMPLETED |
-| BUG-08 *(fixed)* | TrueForge wraps MCP tool failures as `{"error":[{"type":"text",…}]}`; FORGE showed every failed tool call as **successful** in the timeline | High | `trueforge-client/src/turn.ts` | unwrap envelope, readable message; live test asserts `ok:false` | COMPLETED |
+| BUG-08 *(fixed)* | TrueForge wraps MCP tool failures as `{"error":[{"type":"text",…}]}`; QuantForge showed every failed tool call as **successful** in the timeline | High | `trueforge-client/src/turn.ts` | unwrap envelope, readable message; live test asserts `ok:false` | COMPLETED |
 | BUG-09 *(fixed)* | A slow-model timeout was reported as "TrueForge is not reachable" | Medium | `classify.ts` | timeout → STALLED with local-model hint; 15 classifier tests from real payloads | COMPLETED |
 | BUG-10 *(fixed)* | Default `get_context` budget (24k) exceeded small models' windows → silent truncation / empty replies | High | `editor-mcp` | model-sized limits from TrueForge `context_length` | COMPLETED |
 | BUG-11 *(fixed)* | The new submit gate declined a *resumed* approval because the verified flag was not persisted | High | `controller.ts` | persist on verify + one-shot bypass on resume; VS Code resume scenario | COMPLETED |
@@ -229,11 +229,11 @@ Lessons that changed the product (all covered by tests): TrueForge's default 20 
 
 | ID | Date | Decision | Rationale |
 |---|---|---|---|
-| D-001…D-013 | 2026-11-20 | As recorded in [architecture.md §I](architecture.md#i-architectural-decision-records) (TrueForge-only loop, loopback MCP, Review Gate, shadow workspace, lexical+structural retrieval, FORGE-side fallback, storage outside workspace, from-scratch fork point) | see ADRs |
+| D-001…D-013 | 2026-11-20 | As recorded in [architecture.md §I](architecture.md#i-architectural-decision-records) (TrueForge-only loop, loopback MCP, Review Gate, shadow workspace, lexical+structural retrieval, QuantForge-side fallback, storage outside workspace, from-scratch fork point) | see ADRs |
 | D-014 | 2026-11-20 | `@vscode/tree-sitter-wasm` replaces `web-tree-sitter`+`tree-sitter-wasms` | latter pair incompatible (tested) |
 | D-015 | 2026-11-20 | `propose_edit` accepts exact-text `oldText` edits in addition to line ranges | more reliable for weaker/local models; judges may swap models |
 | D-016 | 2026-11-20 | Preload 8 essential tools; defer 3 | keeps deferred-loading visible without forcing `call_tool` indirection on weak models |
-| D-017 | 2026-11-20 | FORGE aborts its own tool calls on Stop | TrueForge `sessions.cancel` waits for running MCP calls |
+| D-017 | 2026-11-20 | QuantForge aborts its own tool calls on Stop | TrueForge `sessions.cancel` waits for running MCP calls |
 | D-018 | 2026-11-20 | Start TrueForge with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'` (not `NETWORK_POLICY_ENABLED=false`) | minimal loosening of TrueForge's SSRF guard |
 | D-019 | 2026-11-20 | Scripted fake model is test infrastructure only; real-model results reported separately | honesty about what is proven |
 | D-020 | 2026-11-20 | `client-end/` left untouched; extension ships a vanilla sidebar | owner instruction |

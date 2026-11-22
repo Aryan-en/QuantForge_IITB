@@ -1,5 +1,5 @@
 /**
- * LIVE end-to-end suite: real TrueForge (local mode) + real FORGE MCP server + real Flask 3.1.3 + a SCRIPTED model.
+ * LIVE end-to-end suite: real TrueForge (local mode) + real QuantForge MCP server + real Flask 3.1.3 + a SCRIPTED model.
  * The scripted model replaces an LLM so the plumbing (agent loop → MCP tools → shadow verification → approval →
  * apply/undo, cancellation, fault handling) is tested deterministically. It proves nothing about model quality.
  * Run: npm run test:live   (needs network for `npx @truefoundry/trueforge@latest` unless TrueForge is already running)
@@ -121,7 +121,7 @@ describe.skipIf(!haveFixture)("Completeness gate: weak / over-eager models are s
     expect(gitStatus(s.ws).trim()).toBe("M src/flask/helpers.py");
   }, 120_000);
 
-  it("OVER-EAGER MODEL: submit_changes without verify_changes is declined by FORGE itself — the human is never prompted for the premature attempt", async () => {
+  it("OVER-EAGER MODEL: submit_changes without verify_changes is declined by QuantForge itself — the human is never prompted for the premature attempt", async () => {
     gateDenials.length = 0;
     const s = await scenario((req) => taskAEagerPolicy(req));
     const sessionId = await tf.api.createSession(await s.rig.specFor("forge-inline-edit")(s.model));
@@ -213,13 +213,13 @@ describe.skipIf(!haveFixture)("Task B with TrueForge context-engineering feature
     const sessionId = await tf.api.createSession(await s.rig.specFor("forge-agent")(s.model));
     const out = await runTurn(tf.api.sdk, { sessionId, text: TASK_B, onEvent: (e) => events.push(e), onApproval: humanApprover(s.rig, "accept-all", []) });
     expect(out.status).toBe("done");
-    // sub-agent thread is visible to FORGE (and in TrueForge's Sessions page)
+    // sub-agent thread is visible to QuantForge (and in TrueForge's Sessions page)
     const start = events.find((e) => e.type === "subagent.start") as any;
     expect(start?.title).toMatch(/discover-cli/);
     expect(events.some((e) => e.type === "subagent.done" && (e as any).ok)).toBe(true);
     // the sub-agent ran its own read-only tool call through the same MCP server
     expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "search_workspace")).toBe(true);
-    // deferred tool loading: get_git_status is not preloaded, yet it was reached through call_tool and executed by FORGE
+    // deferred tool loading: get_git_status is not preloaded, yet it was reached through call_tool and executed by QuantForge
     expect(events.some((e) => e.type === "tool.call" && (e as any).call.tool === "call_tool")).toBe(true);
     expect(s.rig.events.some((e) => e.type === "timeline" && e.event.title === "get_git_status")).toBe(true);
     // the main agent never proposed from the sub-agent: result is the usual three files, applied only after approval

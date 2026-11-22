@@ -45,7 +45,7 @@ test("resilience: offline shows retries then a clear error with workspace unchan
   await page.getByRole("button", { name: "Generate edit" }).click();
   await expect(page.getByText(/Retry \d\/3/).first()).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText("Workspace unchanged")).toBeVisible({ timeout: 30_000 });
-  await expect(page.getByRole("combobox", { name: "Task for FORGE" })).toBeEditable();
+  await expect(page.getByRole("combobox", { name: "Task for QuantForge" })).toBeEditable();
 });
 
 test("resilience: fallback model takes over automatically", async ({ page }) => {

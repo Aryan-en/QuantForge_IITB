@@ -1,7 +1,7 @@
 /**
  * A scripted, deterministic OpenAI-compatible chat-completions server.
  *
- * PURPOSE: exercise FORGE ↔ TrueForge ↔ MCP end-to-end in CI and the evaluation harness without a paid model, and
+ * PURPOSE: exercise QuantForge ↔ TrueForge ↔ MCP end-to-end in CI and the evaluation harness without a paid model, and
  * inject provider failures (401/429/500/hang/drop) for resilience tests. It is a test fixture. It says nothing about
  * how well a real model performs; real-model results must be reported separately.
  */

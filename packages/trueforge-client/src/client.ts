@@ -30,7 +30,7 @@ export interface AgentSpec {
   [k: string]: unknown;
 }
 
-/** Thin, typed access to a TrueForge server. FORGE never talks to a model provider; this is the only egress. */
+/** Thin, typed access to a TrueForge server. QuantForge never talks to a model provider; this is the only egress. */
 export class TrueForgeApi {
   readonly sdk: TrueForge;
   constructor(readonly baseUrl: string, opts: { token?: string; timeoutInSeconds?: number } = {}) {
@@ -60,9 +60,9 @@ export class TrueForgeApi {
     return (r.data as unknown as { name: string; provider: { name: string }; properties?: { contextLength?: number; maxOutputTokens?: number } }[]).map((m) => ({ name: m.name, provider: m.provider.name, contextLength: m.properties?.contextLength, maxOutputTokens: m.properties?.maxOutputTokens }));
   }
 
-  /** Register (or update) FORGE's loopback MCP server in TrueForge via its settings API. */
+  /** Register (or update) QuantForge's loopback MCP server in TrueForge via its settings API. */
   async upsertMcpServer(o: { name: string; url: string; token: string; description?: string }): Promise<void> {
-    const manifest = { type: "remote", name: o.name, description: o.description ?? "FORGE editor tools", url: o.url, auth: { type: "header", headers: { Authorization: `Bearer ${o.token}` } } };
+    const manifest = { type: "remote", name: o.name, description: o.description ?? "QuantForge editor tools", url: o.url, auth: { type: "header", headers: { Authorization: `Bearer ${o.token}` } } };
     const base = this.baseUrl.replace(/\/$/, "");
     const headers = { "content-type": "application/json" };
     let r = await fetch(`${base}/api/v1/settings/mcp-servers`, { method: "POST", headers, body: JSON.stringify({ manifest }) });
@@ -70,7 +70,7 @@ export class TrueForgeApi {
     if (!r.ok) {
       const body = await r.text();
       const hint = /Outbound URL blocked/.test(body)
-        ? ' TrueForge blocks loopback URLs by default; start it with OUTBOUND_URL_ALLOWED_HOSTS=\'["127.0.0.1"]\' (the "FORGE: Start TrueForge" command does this).'
+        ? ' TrueForge blocks loopback URLs by default; start it with OUTBOUND_URL_ALLOWED_HOSTS=\'["127.0.0.1"]\' (the "QuantForge: Start TrueForge" command does this).'
         : "";
       throw new Error(`could not register MCP server "${o.name}" (HTTP ${r.status}): ${body.slice(0, 200)}.${hint}`);
     }

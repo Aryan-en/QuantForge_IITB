@@ -9,8 +9,8 @@ export interface LoadedAgent {
 }
 
 /**
- * Load a FORGE agent definition from `agents/<name>.json` (+ `<name>.instructions.md`).
- * `x-*` keys are FORGE metadata and are stripped before the spec is sent to TrueForge.
+ * Load a QuantForge agent definition from `agents/<name>.json` (+ `<name>.instructions.md`).
+ * `x-*` keys are QuantForge metadata and are stripped before the spec is sent to TrueForge.
  */
 export async function loadAgent(agentsDir: string, name: "forge-agent" | "forge-inline-edit", opts: { model: string; mcpServerName?: string }): Promise<LoadedAgent> {
   const raw = JSON.parse(await fs.readFile(path.join(agentsDir, `${name}.json`), "utf8")) as Record<string, unknown>;

@@ -10,7 +10,7 @@ export interface Classified {
 }
 
 /**
- * Maps real TrueForge failure messages (captured from a live local-mode server) to FORGE error classes.
+ * Maps real TrueForge failure messages (captured from a live local-mode server) to QuantForge error classes.
  *   turn.done {status:"error", message:"[Model Error] Request failed (401): …"}
  *   turn.done {status:"error", message:"[Model Error] Cannot connect to API: bad port"}
  *   SDK/fetch failures talking to TrueForge itself (ECONNREFUSED, timeout) ⇒ TRUEFORGE_UNREACHABLE
@@ -41,7 +41,7 @@ export function classifyThrown(e: unknown): Classified {
     return { errorClass: "STALLED", retryable: true, maxAttempts: 2, title: "TrueForge did not answer in time", hint: "TrueForge is running but the model is slow. For local models raise forge.stallTimeoutMs and start TrueForge with MODEL_HTTP_HEADERS_TIMEOUT_MS=300000." };
   }
   if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|ECONNRESET|network|socket|UND_ERR/i.test(msg)) {
-    return { errorClass: "TRUEFORGE_UNREACHABLE", retryable: false, maxAttempts: 1, title: "TrueForge is not reachable", hint: "Start it with “FORGE: Start TrueForge” (npx @truefoundry/trueforge@latest) and check forge.trueforge.baseUrl." };
+    return { errorClass: "TRUEFORGE_UNREACHABLE", retryable: false, maxAttempts: 1, title: "TrueForge is not reachable", hint: "Start it with “QuantForge: Start TrueForge” (npx @truefoundry/trueforge@latest) and check forge.trueforge.baseUrl." };
   }
   if (/\b401\b|\b403\b|unauthor/i.test(msg)) return { errorClass: "TRUEFORGE_UNREACHABLE", retryable: false, maxAttempts: 1, title: "TrueForge rejected the request", hint: "TrueForge may require login (hosted mode); local mode needs none." };
   return { errorClass: "UNKNOWN", retryable: false, maxAttempts: 1, title: "Unexpected error talking to TrueForge", hint: msg.slice(0, 300) };

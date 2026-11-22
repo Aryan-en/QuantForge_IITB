@@ -2,7 +2,7 @@
 @import "../styles/tokens.css";
 @import "../styles/forge.css";
 
-/* Tailwind aliases over FORGE tokens (Ui-regitry §B.1 layer 3). Components use only these. */
+/* Tailwind aliases over QuantForge tokens (Ui-regitry §B.1 layer 3). Components use only these. */
 @theme inline {
   --color-bg: var(--forge-bg);
   --color-surface: var(--forge-surface);

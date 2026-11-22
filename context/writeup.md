@@ -1,4 +1,4 @@
-FORGE
+QuantForge
 Think. Understand. Engineer. Verify.
 An editor-native coding agent for VS Code whose agent loop runs on TrueForge  ·  TrueFoundry Forge-a-thon, Techfest IIT Bombay 2026-27  ·  Round 1 write-up
 11 editor tools exposed over MCP   ·   0 disk writes before you approve   ·   per-hunk review + byte-exact undo   ·   auto model fallback   ·   24k-token hard context budget
@@ -18,22 +18,22 @@ Punjab Engineering College, Chandigarh
 
  
 2. Starting point
-From scratch. No upstream editor project (Cline, Continue, Roo Code, opencode) was forked or copied, so there is no upstream licence to preserve and no fork commit to declare. The only starter code is the unmodified create-next-app scaffold under client-end/. FORGE is MIT-licensed; dependency licences are listed in THIRD_PARTY_NOTICES.md.
+From scratch. No upstream editor project (Cline, Continue, Roo Code, opencode) was forked or copied, so there is no upstream licence to preserve and no fork commit to declare. The only starter code is the unmodified create-next-app scaffold under client-end/. QuantForge is MIT-licensed; dependency licences are listed in THIRD_PARTY_NOTICES.md.
 3. Architecture on TrueForge
-TrueForge owns the agent loop; FORGE is its client and tool host. The extension never calls a model provider. A guard test fails the build if any provider SDK or API host appears in shipped code, including the UI.
+TrueForge owns the agent loop; QuantForge is its client and tool host. The extension never calls a model provider. A guard test fails the build if any provider SDK or API host appears in shipped code, including the UI.
 
 Figure 1. The UI sends only ids and decisions, never file contents to write. Every message is schema-validated on both sides.
 •     Editor capabilities as MCP tools. read_file, search_workspace, find_symbol, get_file_structure, get_context, propose_edit, submit_changes, run_terminal, get_diagnostics, get_git_status, update_plan. The agent decides which to call and which files to read; the extension never pre-selects files beyond your explicit @mentions.
-•     TrueForge approval drives the review. propose_edit only queues a proposal. submit_changes and run_terminal are approval-gated, so the turn pauses. FORGE shows the diff (native editor, CodeLens per hunk, sidebar). Allow applies exactly the hunks you accepted as one undoable batch.
-•     Harness features used, and why. Sub-agents do wide discovery so the main context stays small; deferred tool loading keeps 8 tools preloaded and fetches the rest on demand; compaction and large-result offloading are enabled in the spec; tool approval is the review gate; the event log lets a turn resume after a window reload. All are visible in the TrueForge session and in FORGE's Timeline.
-•     Cancellation and consistency. TrueForge's sessions.cancel waits for running MCP calls, so FORGE also aborts its own tool processes (whole process group). Verification runs in a disposable shadow copy that already contains the proposed edits, so a failed or cancelled run leaves git status clean.
+•     TrueForge approval drives the review. propose_edit only queues a proposal. submit_changes and run_terminal are approval-gated, so the turn pauses. QuantForge shows the diff (native editor, CodeLens per hunk, sidebar). Allow applies exactly the hunks you accepted as one undoable batch.
+•     Harness features used, and why. Sub-agents do wide discovery so the main context stays small; deferred tool loading keeps 8 tools preloaded and fetches the rest on demand; compaction and large-result offloading are enabled in the spec; tool approval is the review gate; the event log lets a turn resume after a window reload. All are visible in the TrueForge session and in QuantForge's Timeline.
+•     Cancellation and consistency. TrueForge's sessions.cancel waits for running MCP calls, so QuantForge also aborts its own tool processes (whole process group). Verification runs in a disposable shadow copy that already contains the proposed edits, so a failed or cancelled run leaves git status clean.
 4. How context is selected
 A repository is never concatenated into the prompt. The agent-called get_context and your explicit @file / @symbol mentions feed one pipeline that ranks, then packs to a hard token budget: query terms → ripgrep per term, IDF-weighted (ubiquitous terms ignored) → Tree-sitter symbols matching identifiers (Python, TS/JS) → import-graph neighbours and test affinity → score (mention 1.0, text .45, symbol .35, graph .25, test .10, recency .10) → pack each file at the richest tier that fits.
 •     Budget. Default 24,000 tokens, configurable, a hard cap that is property-tested from 500 to 24,000. Tiers: Full → symbol excerpts + outline → signatures-only skeleton → path only. Penalties push down changelogs, lockfiles and generated files; a relevance floor drops weak matches; secret files are never returned.
 •     The reasoning is visible. Every selected item shows why it was chosen and every exclusion shows why it was left out. The Context tab renders tier badges, relevance bars and a stacked budget meter, which is what judges see during Task B.
 •     Measured on Flask 3.1.3 (83 files, about 17k lines): for Task B's wording, src/flask/cli.py ranks #1, tests/test_cli.py #3 and docs/cli.rst #7 in about 0.4 s. For Task A, helpers.py ranks #1, citing get_debug_flag (L28-33). An optional SQLite FTS5 symbol index takes lookups from 195 ms cold to 13 ms warm.
 5. Model setup
-Models are configured only inside TrueForge (Settings → Models): a catalog provider or any OpenAI-compatible endpoint, including a local one. FORGE stores model names, never keys, and ships only an example config (config/forge.example.json).
+Models are configured only inside TrueForge (Settings → Models): a catalog provider or any OpenAI-compatible endpoint, including a local one. QuantForge stores model names, never keys, and ships only an example config (config/forge.example.json).
 Model
 Where it ran
 Approx. cost
@@ -48,7 +48,7 @@ Local test server, in CI only
 Plumbing and fault-injection tests; not used in the demo and says nothing about model quality
 
  
-Switching models. Set forge.model.primary and an ordered forge.model.fallbacks list in VS Code settings. With two or more models, FORGE retries with jittered exponential backoff, then falls back automatically to the next model in a new TrueForge session with a progress handoff. There is no model-specific code or prompt, so the same build runs on whatever model an organiser chooses.
+Switching models. Set forge.model.primary and an ordered forge.model.fallbacks list in VS Code settings. With two or more models, QuantForge retries with jittered exponential backoff, then falls back automatically to the next model in a new TrueForge session with a progress handoff. There is no model-specific code or prompt, so the same build runs on whatever model an organiser chooses.
 6. Scorecard
 Criterion
 One-line claim

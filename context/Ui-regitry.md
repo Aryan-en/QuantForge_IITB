@@ -1,19 +1,19 @@
-# FORGE — UI Registry (Design System and Component Catalogue)
+# QuantForge — UI Registry (Design System and Component Catalogue)
 
 > **Filename note:** `Ui-regitry.md` keeps the spelling requested by the project owner; do not "fix" it without updating every link in the six docs.
 > **Frontend location:** all frontend code lives in this repository at `/Users/aryansingh/Documents/QuantForge_IITB/client-end/` (Next.js 16 / React 19 / Tailwind CSS 4 scaffold, per `client-end/package.json`). Components are shared between (a) the Next.js app — component gallery and mock-host harness — and (b) the VS Code webview bundle at `client-end/webview/` ([architecture.md ADR-009](architecture.md#i-architectural-decision-records)).
 > **Implementation status (2026-11-22):** a React UI built from this registry now exists in `client-end/` and is bundled to `dist/webview`, which the extension prefers; I have not verified it inside VS Code. Before that, and still as the fallback, the extension ships a compact vanilla-JS sidebar (`packages/extension/src/webviewHtml.ts`: Agent, Context, Plan, Review, Timeline tabs, approval card, CodeLens/native diff in the editor). The React components below are **not built**; `client-end/` is frozen. The webview message contract is implemented in `packages/protocol/src/messages.ts` (including `review.openDiff` and `command.run`).
-> **Original status note:** the repository contains **no FORGE UI yet**. Everything below is **PLANNED** unless a component's *Status* says otherwise; at the time of writing none is implemented ([progress_tracker.md](progress_tracker.md)).
+> **Original status note:** the repository contains **no QuantForge UI yet**. Everything below is **PLANNED** unless a component's *Status* says otherwise; at the time of writing none is implemented ([progress_tracker.md](progress_tracker.md)).
 > **Related:** [architecture.md](architecture.md) · [plan.md](plan.md) · [Agents.md](Agents.md) · [README.md](../README.md)
 
 ---
 
 ## A. Design Philosophy
 
-FORGE should feel **premium, minimal, technical, professional, trustworthy, developer-centric, fast, intuitive**. Inspiration is the *quality bar* of Cursor, Linear, VS Code, Raycast, GitHub Desktop — dense information, calm surfaces, immediate feedback, keyboard-first — without copying any layout, icon set, or branding.
+QuantForge should feel **premium, minimal, technical, professional, trustworthy, developer-centric, fast, intuitive**. Inspiration is the *quality bar* of Cursor, Linear, VS Code, Raycast, GitHub Desktop — dense information, calm surfaces, immediate feedback, keyboard-first — without copying any layout, icon set, or branding.
 
 Principles (decisions, not slogans):
-1. **Native first.** FORGE lives inside VS Code. Use native surfaces where they exist (Activity Bar, editor decorations, CodeLens, diff editor, notifications for fatal errors, Problems/terminal) and a webview only for what VS Code cannot render (conversation, timeline, inspector, review queue).
+1. **Native first.** QuantForge lives inside VS Code. Use native surfaces where they exist (Activity Bar, editor decorations, CodeLens, diff editor, notifications for fatal errors, Problems/terminal) and a webview only for what VS Code cannot render (conversation, timeline, inspector, review queue).
 2. **Show the work.** Every automatic decision (files chosen, tool called, command run) is visible with its reason. Trust comes from transparency.
 3. **The human owns the write.** The strongest visual affordance in the product is the review control; nothing implies something was saved when it was not.
 4. **Quiet by default.** Neutral surfaces, one accent color; semantic colors only for state (success, warning, danger, info).
@@ -28,8 +28,8 @@ Principles (decisions, not slogans):
 
 Three layers, defined once in `client-end/styles/tokens.css` (PLANNED) and consumed through Tailwind 4 `@theme inline` — **no hard-coded colors in components**.
 
-1. **Host layer** — VS Code theme variables (`--vscode-editor-background`, `--vscode-foreground`, `--vscode-focusBorder`, …). In the webview, surfaces and text *inherit these* so FORGE always matches the user's theme (including high contrast).
-2. **FORGE semantic tokens** — `--forge-*`. Default values fall back to the host layer; the *standalone* values below apply in the Next.js harness (no VS Code) and as fallbacks.
+1. **Host layer** — VS Code theme variables (`--vscode-editor-background`, `--vscode-foreground`, `--vscode-focusBorder`, …). In the webview, surfaces and text *inherit these* so QuantForge always matches the user's theme (including high contrast).
+2. **QuantForge semantic tokens** — `--forge-*`. Default values fall back to the host layer; the *standalone* values below apply in the Next.js harness (no VS Code) and as fallbacks.
 3. **Tailwind aliases** — `@theme inline { --color-surface: var(--forge-surface); … }` so classes like `bg-surface`, `text-muted`, `border-default` work.
 
 ```css
@@ -44,7 +44,7 @@ Three layers, defined once in `client-end/styles/tokens.css` (PLANNED) and consu
   --forge-text:          var(--vscode-foreground,         #e6e9ee);
   --forge-text-muted:    var(--vscode-descriptionForeground, #a3acb9);
   --forge-text-faint:    #6e7886;
-  --forge-accent:        #f5792a;           /* "ember" — FORGE brand accent */
+  --forge-accent:        #f5792a;           /* "ember" — QuantForge brand accent */
   --forge-accent-hover:  #ff8f4a;
   --forge-accent-fg:     #1a0e05;
   --forge-focus:         var(--vscode-focusBorder, #58a6ff);
@@ -123,15 +123,15 @@ All text/background pairs must meet WCAG 2.1 AA (4.5:1 for body text, 3:1 for la
 
 | Concern | Surface | Rationale |
 |---|---|---|
-| Entry point | **Activity Bar** icon "FORGE" → `forge.sidebar` view container | Standard discoverability |
+| Entry point | **Activity Bar** icon "QuantForge" → `forge.sidebar` view container | Standard discoverability |
 | Main experience | **Primary Sidebar webview view** (`WebviewViewProvider`); optional "Open in Editor Area" panel for wide layouts (`forge.openPanel`) | Narrow-first, can be widened |
 | Inline edit | **Editor**: selection → command/keybinding → `showInputBox` for the instruction → decorations + CodeLens | Native, no webview latency |
 | Per-hunk review in code | **CodeLens** (`Accept` · `Reject`) + decorations; side-by-side via native `vscode.diff` on `forge-proposed:` documents | Uses VS Code's own diff editor |
 | Terminal | Commands run in the Shadow Workspace; output summarized in Timeline; "Open in Terminal" link opens a VS Code terminal | Don't reinvent the terminal |
-| Status | **Status bar item** `$(sparkle) FORGE · <model>` with connection state color; click → Model Configuration | Always visible, tiny |
+| Status | **Status bar item** `$(sparkle) QuantForge · <model>` with connection state color; click → Model Configuration | Always visible, tiny |
 | Fatal errors | `window.showErrorMessage` (blocking cases such as TrueForge unreachable, with action buttons) | Visible even if sidebar is collapsed |
 | Notifications of progress | Sidebar timeline; no toast spam | |
-| Settings | VS Code Settings (`forge.*`) for persistence; FORGE Settings screen is a friendly view over the same keys | One source of truth |
+| Settings | VS Code Settings (`forge.*`) for persistence; QuantForge Settings screen is a friendly view over the same keys | One source of truth |
 
 ### C.2 Sidebar anatomy (≥ 280 px wide)
 
@@ -160,7 +160,7 @@ Each screen lists the components it composes (defined in §E).
 
 ### D.1 Welcome Screen
 - **Shown when:** first run, or no TrueForge connection/model configured.
-- **Content:** FORGE wordmark + one-line tagline ("Think. Understand. Engineer. Verify."); *Connection card* (TrueForge URL, status: Connected / Unreachable / Not configured, button **Start TrueForge** → runs `forge.startTrueForge`, **Check again**); *Model card* (primary model name from TrueForge config, fallback list, status; link "How to configure a model in TrueForge" → opens TrueForge docs); **Start new agent session** (primary button; disabled with reason until connected); **Open documentation** (secondary; opens README).
+- **Content:** QuantForge wordmark + one-line tagline ("Think. Understand. Engineer. Verify."); *Connection card* (TrueForge URL, status: Connected / Unreachable / Not configured, button **Start TrueForge** → runs `forge.startTrueForge`, **Check again**); *Model card* (primary model name from TrueForge config, fallback list, status; link "How to configure a model in TrueForge" → opens TrueForge docs); **Start new agent session** (primary button; disabled with reason until connected); **Open documentation** (secondary; opens README).
 - **States:** loading (checking connection, skeleton), connected (primary CTA enabled), unreachable (danger banner + instructions + retry), no model (warning banner + link), error (banner with code and `Copy details`).
 - **Components:** `ConnectionCard`, `ModelStatusChip`, `Button`, `ErrorBanner`, `EmptyState`.
 
@@ -202,13 +202,13 @@ Purpose: make B1 visible — *which files the agent chose and why*.
 
 ### D.7 Model Configuration
 - **Active model:** name as configured in TrueForge (`provider/model`), connection status dot (Connected / Degraded / Unreachable / Auth failed) with last-checked time, **Test connection**.
-- **Provider configuration status:** read-only summary + "Open TrueForge Settings → Models" button. FORGE never shows or stores API keys.
+- **Provider configuration status:** read-only summary + "Open TrueForge Settings → Models" button. QuantForge never shows or stores API keys.
 - **Fallback configuration:** ordered list of fallback model names (drag handle or ↑/↓ buttons for keyboard users), add/remove; validation message if a name is unknown to TrueForge (when checkable).
 - **Retry policy (read-only summary):** "3 attempts, exponential backoff with jitter" + stall timeout setting.
-- **Error handling preview:** last failure classification and what FORGE did (retried/fell back/stopped).
+- **Error handling preview:** last failure classification and what QuantForge did (retried/fell back/stopped).
 
 ### D.8 Settings
-- **Keyboard shortcuts:** list of FORGE commands with current bindings and "Change in Keyboard Shortcuts" link (opens VS Code UI filtered on `forge.`).
+- **Keyboard shortcuts:** list of QuantForge commands with current bindings and "Change in Keyboard Shortcuts" link (opens VS Code UI filtered on `forge.`).
 - **Context:** token budget slider/number (`forge.context.budgetTokens`), exclude globs (`forge.context.exclude`), max files, include/exclude secrets toggle (default: excluded, with warning on enable).
 - **UI preferences:** theme override (Auto/Dark/Light), density (Comfortable/Compact), show tool details by default, reduced motion (Auto/On).
 - **Model configuration guidance:** link/summary to D.7 and TrueForge docs.
@@ -279,7 +279,7 @@ Standard events: components emit callbacks (`onX`) only; they never call `postMe
 | Interaction | Exact behavior |
 |---|---|
 | Button clicks | Immediate visual press (80 ms); async actions show spinner and disable; double-click guarded (second click ignored while pending); result announced via live region |
-| Keyboard shortcuts (defaults) | **Inline edit:** `Cmd+Alt+K` / `Ctrl+Alt+K` (editor focus, has selection). **Open FORGE:** `Cmd+Alt+F` / `Ctrl+Alt+F`. **Send:** `Enter` in Composer (`Shift+Enter` newline). **Stop:** `Esc` in Composer or `Cmd/Ctrl+.` while a turn runs. **Review:** `A` accept / `R` reject on focused hunk; `Cmd/Ctrl+Enter` apply accepted; `Cmd/Ctrl+Z` in Review = Undo last batch (when Review has focus). All are contributed via `package.json` `keybindings` so users can rebind (verify conflicts at implementation) |
+| Keyboard shortcuts (defaults) | **Inline edit:** `Cmd+Alt+K` / `Ctrl+Alt+K` (editor focus, has selection). **Open QuantForge:** `Cmd+Alt+F` / `Ctrl+Alt+F`. **Send:** `Enter` in Composer (`Shift+Enter` newline). **Stop:** `Esc` in Composer or `Cmd/Ctrl+.` while a turn runs. **Review:** `A` accept / `R` reject on focused hunk; `Cmd/Ctrl+Enter` apply accepted; `Cmd/Ctrl+Z` in Review = Undo last batch (when Review has focus). All are contributed via `package.json` `keybindings` so users can rebind (verify conflicts at implementation) |
 | Drag and drop | Only: (1) drop files/folders from the Explorer onto the Composer to add `@file` mentions; (2) reorder fallback models (with keyboard alternative buttons). No other drag interactions |
 | Accept / reject | Hunk-level and file-level toggles are reversible until Apply. Accept marks; **nothing writes until Apply** (which answers the TrueForge approval). After apply, hunks show `Applied` and Undo becomes available. Reject never needs confirmation |
 | Confirmation dialogs | Only for: Reject all with ≥ 1 accepted hunk (to prevent loss of decisions), Undo when files changed since apply, switching session while a turn is running ("Cancel the running turn?"). Never for Accept, single Reject, or Cancel |
@@ -302,7 +302,7 @@ Standard events: components emit callbacks (`onX`) only; they never call `postMe
 | **Minimum width** | 240 px usable: horizontal scroll disabled; paths middle-truncate (`src/…/cli.py`) with full path in tooltip and `title` |
 | **Editor layouts** | Inline edit works in split editors (acts on the active editor) and untitled/unsaved buffers (proposal base = buffer content); diffs open in the active group beside it |
 | **High-DPI** | Vector icons only; 1 px borders remain 1 CSS px (use `border-width: 1px`, no 0.5 px hacks); no raster assets in the webview |
-| **Themes** | Webview follows VS Code theme via body classes (`vscode-dark`, `vscode-light`, `vscode-high-contrast`, `vscode-high-contrast-light`); FORGE tokens recompute; accent contrast checked in both; high-contrast mode drops tinted backgrounds in favour of 1 px borders and underline/`+`/`−` markers |
+| **Themes** | Webview follows VS Code theme via body classes (`vscode-dark`, `vscode-light`, `vscode-high-contrast`, `vscode-high-contrast-light`); QuantForge tokens recompute; accent contrast checked in both; high-contrast mode drops tinted backgrounds in favour of 1 px borders and underline/`+`/`−` markers |
 | **Zoom / font size** | Layout in `rem`/`em` anchored to `--vscode-font-size`; no fixed-height text containers |
 
 ---
@@ -329,7 +329,7 @@ Rules: components are **presentational** (props in, callbacks out); data/state l
 - Before writing Next.js-specific code in `client-end/app`, read `client-end/AGENTS.md` and the matching guide in `client-end/node_modules/next/dist/docs/` (this Next.js version differs from common knowledge).
 
 ### H.3 shadcn/ui usage
-shadcn components are copied into `components/ui/` (they are source, not a dependency) and **restyled to FORGE tokens**; only Radix-based primitives that work in a CSP-restricted webview are allowed. Any shadcn component that depends on `next/*` or portals to `document.body` outside the webview root must be adapted (portal container = app root). Mark adaptation in the file header.
+shadcn components are copied into `components/ui/` (they are source, not a dependency) and **restyled to QuantForge tokens**; only Radix-based primitives that work in a CSP-restricted webview are allowed. Any shadcn component that depends on `next/*` or portals to `document.body` outside the webview root must be adapted (portal container = app root). Mark adaptation in the file header.
 
 ### H.4 Naming
 Components `PascalCase.tsx`; hooks `useThing.ts`; files in `lib` `camelCase.ts`; CSS variables `--forge-*`; test ids `data-testid="forge-<component>-<part>"`; message types `domain.verb` (`review.hunk`).

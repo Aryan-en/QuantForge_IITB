@@ -148,8 +148,8 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
       emptyState={
         <EmptyState
           icon={Bot}
-          title="What should FORGE build?"
-          body="Describe the outcome. FORGE finds the files, makes the change and shows it for review."
+          title="What should QuantForge build?"
+          body="Describe the outcome. QuantForge finds the files, makes the change and shows it for review."
         />
       }
     />
@@ -230,7 +230,7 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
               </section>
               <section aria-label="Details" className="flex min-h-0 min-w-0 flex-1 flex-col">
                 <div className="border-b border-border">
-                  <Tabs items={sideTabs} value={sideTab} onChange={setSideTab} label="FORGE details" idPrefix="forge-side" />
+                  <Tabs items={sideTabs} value={sideTab} onChange={setSideTab} label="QuantForge details" idPrefix="forge-side" />
                 </div>
                 {sideTabs.map((t) => (
                   <TabPanel key={t.id} id={t.id} active={sideTab === t.id} idPrefix="forge-side" className="forge-scroll min-h-0 flex-1 overflow-y-auto">
@@ -242,7 +242,7 @@ export function ForgeApp({ mentionSource = [], forceWelcome, initialDraft }: { m
           ) : (
             <main className="flex min-h-0 flex-1 flex-col">
               <div className="border-b border-border">
-                <Tabs items={allTabs} value={tab} onChange={setTab} label="FORGE sections" compact={narrow} />
+                <Tabs items={allTabs} value={tab} onChange={setTab} label="QuantForge sections" compact={narrow} />
               </div>
               {banners}
               <TabPanel id="agent" active={tab === "agent"} className="flex min-h-0 flex-1 flex-col">

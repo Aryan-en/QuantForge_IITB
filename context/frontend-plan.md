@@ -1,4 +1,4 @@
-# FORGE — Frontend Plan
+# QuantForge — Frontend Plan
 
 > **Scope:** everything under `client-end/` — the React UI that runs inside the VS Code webview, plus the Next.js harness used to build, test and rehearse it.
 > **Governing docs:** [Ui-regitry.md](Ui-regitry.md) (design system and component contract — binding), [architecture.md §B.2 / §E](architecture.md) (message contract and state machines), [plan.md](plan.md) (phases, backlog IDs), [Agents.md](Agents.md) (rules). If this file conflicts with the registry, the registry wins and this file gets fixed.
@@ -43,7 +43,7 @@ Points are awarded for what is on screen. The UI is planned backwards from that.
 Follows Ui-regitry §C.2. Sidebar (narrow, ≥ 280 px):
 
 ```
-┌ Header: FORGE · [Session ▾] · [● model] · [+] ┐
+┌ Header: QuantForge · [Session ▾] · [● model] · [+] ┐
 ├ Tabs: Agent | Context | Plan | Review (n) | Timeline ┤
 │  ErrorBanner / FallbackBanner (when present)          │
 │  Active tab body (scrolls)                            │
@@ -62,7 +62,7 @@ Pushed views: **Welcome** (no connection/model), **Model Configuration**, **Sett
 ```
 client-end/
 ├─ app/                         # Next.js only (harness) — may import next/*
-│  ├─ layout.tsx                # FORGE metadata, tokens, no Google fonts in shared code
+│  ├─ layout.tsx                # QuantForge metadata, tokens, no Google fonts in shared code
 │  ├─ page.tsx                  # VS Code–like frame + scenario controller (mock host)
 │  └─ gallery/page.tsx          # every component × state
 ├─ webview/
@@ -122,7 +122,7 @@ The registry fixes the tokens (dark `#0b0d10` base, single **ember** accent `#f5
 5. **Motion within registry limits** — 80/140/220 ms, `cubic-bezier(0.2,0,0,1)`; no typewriter easing; nothing animates under `prefers-reduced-motion`.
 6. **Inherits VS Code theme in the webview** — tokens fall back to `--vscode-*` vars, so it looks native in the judge's theme; the harness uses the standalone dark values.
 
-The harness frame (title bar, activity bar, file tree, editor with Flask's `helpers.py`, status bar) is drawn with the same tokens so rehearsal screenshots look like the real thing; it is clearly marked "FORGE UI harness · mock host".
+The harness frame (title bar, activity bar, file tree, editor with Flask's `helpers.py`, status bar) is drawn with the same tokens so rehearsal screenshots look like the real thing; it is clearly marked "QuantForge UI harness · mock host".
 
 ---
 
@@ -132,7 +132,7 @@ Each step maps to plan.md backlog IDs and leaves something runnable.
 
 | Step | Deliverable | Backlog | Done when |
 |---|---|---|---|
-| **F0** | Clean template; `styles/tokens.css`; Tailwind `@theme inline` aliases; `cn`, format helpers; deps: `lucide-react`, `clsx`, `tailwind-merge`, `class-variance-authority`, `zod` | FORGE-007, 013 | `/` renders FORGE shell; no template content; typecheck + lint green |
+| **F0** | Clean template; `styles/tokens.css`; Tailwind `@theme inline` aliases; `cn`, format helpers; deps: `lucide-react`, `clsx`, `tailwind-merge`, `class-variance-authority`, `zod` | FORGE-007, 013 | `/` renders QuantForge shell; no template content; typecheck + lint green |
 | **F1** | `lib/protocol` (types + zod), `lib/store` reducer, `lib/host` (interface, `HostProvider`, `useHost`, mock host) | FORGE-010 (UI mirror) | Reducer handles every message type; invalid messages dropped and logged |
 | **F2** | Primitives: Button, IconButton, Input/Textarea, Tabs (WAI-ARIA), Chip, Badge, Tooltip, Dialog, Skeleton, Spinner, ProgressBar, Toast, ScrollArea (stick-to-bottom), CodeBlock | registry E.1 | Gallery shows each with states |
 | **F3** | Agent workspace: AppShell, header (SessionSwitcher, ModelStatusChip), TabBar, MessageList, UserMessage, AssistantMessage (safe mini-markdown, live caret), ToolActivityCard, SubagentCard, ApprovalCard, StatusStrip, Composer (+ MentionPicker), cancel flow | FORGE-039, 050, 051 (UI) | Scenario B streams end-to-end in the harness; Stop works at any point |

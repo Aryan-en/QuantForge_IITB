@@ -9,7 +9,7 @@ export interface ToolCallInfo {
   threadId: string;
 }
 
-/** TrueForge events normalised for FORGE's UI/timeline. Field names follow the SDK's camelCase. */
+/** TrueForge events normalised for QuantForge's UI/timeline. Field names follow the SDK's camelCase. */
 export type ForgeStreamEvent =
   | { type: "turn.started"; turnId: string; sessionId: string }
   | { type: "mcp.ready"; servers: string[] }

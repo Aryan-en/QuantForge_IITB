@@ -60,7 +60,7 @@ test("the bundled UI runs a full agent turn against the extension's wire format"
   await snap(page, {});
 
   // Task submit
-  const box = page.getByRole("combobox", { name: "Task for FORGE" });
+  const box = page.getByRole("combobox", { name: "Task for QuantForge" });
   await box.fill("Add a flask config command");
   await box.press("Enter");
   await expect.poll(async () => (await sent(page)).some((m) => m.type === "task.submit")).toBe(true);
@@ -153,7 +153,7 @@ test("cancel, retry, fallback and errors map to the right UI and messages", asyn
     sessionId: "ses_2",
     messages: [user],
     timeline: t2,
-    notice: { level: "error", title: "TrueForge is not reachable", message: "connect ECONNREFUSED. Start it with “FORGE: Start TrueForge”.", action: { label: "Start TrueForge", command: "forge.startTrueForge" } },
+    notice: { level: "error", title: "TrueForge is not reachable", message: "connect ECONNREFUSED. Start it with “QuantForge: Start TrueForge”.", action: { label: "Start TrueForge", command: "forge.startTrueForge" } },
   });
   await expect(page.getByText("TrueForge is not reachable")).toBeVisible();
   await page.getByRole("button", { name: "Start TrueForge" }).first().click();

@@ -35,7 +35,7 @@ export function taskAWeakPolicy(req: ChatRequest): Reply {
   return { type: "text", text: "Done: code and docstring updated." };
 }
 
-/** An over-eager model that tries to submit without verifying; FORGE must send it back WITHOUT asking the human. */
+/** An over-eager model that tries to submit without verifying; QuantForge must send it back WITHOUT asking the human. */
 export function taskAEagerPolicy(req: ChatRequest): Reply {
   const res = toolResults(req);
   const n = res.length;

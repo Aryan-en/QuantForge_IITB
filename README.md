@@ -1,8 +1,8 @@
-# FORGE
+# QuantForge
 
 **Think. Understand. Engineer. Verify.**
 
-FORGE is an AI software-engineering agent for Visual Studio Code. You describe a task in plain language; FORGE finds the relevant code in your repository, plans the change, edits several files, runs your tests, and shows every modification as a reviewable diff before anything touches disk. The agent loop runs on [TrueForge](https://github.com/truefoundry/trueforge) (TrueFoundry's open-source agent harness); FORGE is the editor-native client and tool provider.
+QuantForge is an AI software-engineering agent for Visual Studio Code. You describe a task in plain language; QuantForge finds the relevant code in your repository, plans the change, edits several files, runs your tests, and shows every modification as a reviewable diff before anything touches disk. The agent loop runs on [TrueForge](https://github.com/truefoundry/trueforge) (TrueFoundry's open-source agent harness); QuantForge is the editor-native client and tool provider.
 
 > ### Project status (2026-11-22)
 > Backend, VS Code extension and a React UI are in place. Verified: **111** unit/MCP/UI/guard tests, **14** live tests against **real TrueForge + real Flask 3.1.3**, and **106** checks across 5 scenarios inside a **real VS Code** (Task A, automatic fallback, unreachable endpoint, resume across a real restart, cancel at 22 ms) — `git status` clean after each. With a **real local model (qwen3-8b)**: Task A passes 3/3, Task C's fallback works, **Task B has not passed** (the laptop is too slow to measure it). No strong/hosted model has been tested yet. Details: [context/progress_tracker.md](context/progress_tracker.md).
@@ -14,27 +14,27 @@ FORGE is an AI software-engineering agent for Visual Studio Code. You describe a
 **Documents (in `context/`):** [architecture](context/architecture.md) · [plan](context/plan.md) · [UI registry](context/Ui-regitry.md) · [agent rules](context/Agents.md) · [progress tracker](context/progress_tracker.md)
 
 ## Contents
-1. [Introduction](#1-project-introduction) · 2. [Why FORGE](#2-why-forge) · 3. [Features](#3-key-features) · 4. [Architecture](#4-architecture) · 5. [Tech stack](#5-technology-stack) · 6. [Prerequisites](#6-prerequisites) · 7. [Installation](#7-installation) · 8. [TrueForge setup](#8-trueforge-setup) · 9. [Development](#9-development-setup) · 10. [Structure](#10-project-structure) · 11. [Configuration](#11-configuration) · 12. [Security](#12-security) · 13. [Competition demo](#13-competition-demonstration) · 14. [Roadmap](#14-roadmap) · 15. [Limitations](#15-limitations) · 16. [Contributing](#16-contributing) · 17. [Licence](#17-licence-and-attribution) · 18. [Acknowledgements](#18-acknowledgements)
+1. [Introduction](#1-project-introduction) · 2. [Why QuantForge](#2-why-forge) · 3. [Features](#3-key-features) · 4. [Architecture](#4-architecture) · 5. [Tech stack](#5-technology-stack) · 6. [Prerequisites](#6-prerequisites) · 7. [Installation](#7-installation) · 8. [TrueForge setup](#8-trueforge-setup) · 9. [Development](#9-development-setup) · 10. [Structure](#10-project-structure) · 11. [Configuration](#11-configuration) · 12. [Security](#12-security) · 13. [Competition demo](#13-competition-demonstration) · 14. [Roadmap](#14-roadmap) · 15. [Limitations](#15-limitations) · 16. [Contributing](#16-contributing) · 17. [Licence](#17-licence-and-attribution) · 18. [Acknowledgements](#18-acknowledgements)
 
 ---
 
 ## 1. Project Introduction
 
-- **Name:** FORGE
+- **Name:** QuantForge
 - **Tagline:** Think. Understand. Engineer. Verify.
 - **What it is:** a VS Code extension that behaves like an engineering collaborator, not a chatbot. A developer states an outcome ("add a `config` CLI command, tested and documented"); the agent discovers the files, edits them, verifies, and presents hunks to accept or reject.
 - **Value proposition:** (1) repository-aware context with *visible reasoning* about what was selected and why; (2) autonomous multi-file changes where you never name files; (3) the developer owns every write — no silent changes, per-hunk review, undo; (4) model independence and resilience, because models are configured in TrueForge and failures degrade gracefully.
 
-## 2. Why FORGE?
+## 2. Why QuantForge?
 
-| Common problem with AI coding assistants | How FORGE is designed to address it |
+| Common problem with AI coding assistants | How QuantForge is designed to address it |
 |---|---|
 | **Incomplete repository understanding** — the model sees only what was pasted or the open file | Symbol- and dependency-aware retrieval (ripgrep + Tree-sitter + VS Code language services) behind agent-callable tools |
 | **Poor context selection** — whole files are stuffed in until the window fills | Ranked, token-budgeted context with tiers (full → symbols → skeleton → path) and exclusion reasons |
 | **Unsafe modifications** — edits land on disk before you've looked | Edits are *proposals*; only an approved review applies them, per hunk, with undo |
 | **Limited multi-file reasoning** | A TrueForge-driven tool loop (search → read → plan → edit → test) with subagents for discovery |
 | **Opaque execution** | Execution timeline, context inspector and the TrueForge session/turn/tool-call log |
-| **Provider lock-in and fragility** | Models live in TrueForge; FORGE retries with backoff and can fall back to a second configured model |
+| **Provider lock-in and fragility** | Models live in TrueForge; QuantForge retries with backoff and can fall back to a second configured model |
 
 ## 3. Key Features
 
@@ -48,10 +48,10 @@ Legend: ✅ implemented and verified (with a scripted model — see status box) 
 | Context inspector + `@` picker | ✅ | Sidebar tab shows items, tiers, tokens, reasons, exclusions, budget; `@` dropdown suggests files and symbols |
 | Diff review & safety | ✅ | Hunks, per-hunk accept/reject, apply via `WorkspaceEdit`, undo journal, stale/conflict detection; nothing is written before approval |
 | Review Gate | ✅ | `submit_changes` is approval-gated by TrueForge; its approval *is* the review |
-| Completeness gate | ✅ | `verify_changes` makes the agent map every requirement to a line it *added*; FORGE declines `submit_changes` before asking you until it passes. Lifted a real 8B model from 0/3 to 3/3 on Task A |
+| Completeness gate | ✅ | `verify_changes` makes the agent map every requirement to a line it *added*; QuantForge declines `submit_changes` before asking you until it passes. Lifted a real 8B model from 0/3 to 3/3 on Task A |
 | Model-aware output sizing | ✅ | Context budget, file reads and command output are sized to the smallest model's context window |
 | Streaming | ✅ | Token deltas (coalesced per frame) and tool events stream to the sidebar |
-| Cancellation | ✅ | Stop aborts TrueForge's turn *and* FORGE's running tools; process groups reaped; tree stays clean |
+| Cancellation | ✅ | Stop aborts TrueForge's turn *and* QuantForge's running tools; process groups reaped; tree stays clean |
 | Model resilience | ✅ | Real TrueForge error payloads classified; backoff with jitter; stall detection; automatic fallback to a second configured model |
 | Execution timeline / plan | 🟡 | Basic tabs in a vanilla sidebar |
 | React UI per the UI registry | 🟡 | Built in `client-end/` (components, mock host, Playwright e2e per its own tests) and bundled to `dist/webview`, preferred by the extension; the built-in page is the fallback. I did not run it inside VS Code myself |
@@ -83,7 +83,7 @@ flowchart LR
   TF --> M
 ```
 
-TrueForge owns the loop and talks to models; FORGE hosts the editor tools and owns review and writes. Details, sequence diagrams and state machines: [architecture.md](context/architecture.md).
+TrueForge owns the loop and talks to models; QuantForge hosts the editor tools and owns review and writes. Details, sequence diagrams and state machines: [architecture.md](context/architecture.md).
 
 ## 5. Technology Stack
 
@@ -136,15 +136,15 @@ The competition fixture (needs Python ≥ 3.9, git, network): `eval/setup-flask.
 
 Facts below were verified against a real local TrueForge on 2026-11-20.
 
-1. **Start TrueForge** (local mode, SQLite). It must be allowed to call FORGE's loopback tool server, which its SSRF guard blocks by default:
+1. **Start TrueForge** (local mode, SQLite). It must be allowed to call QuantForge's loopback tool server, which its SSRF guard blocks by default:
    ```bash
    MODEL_HTTP_HEADERS_TIMEOUT_MS=300000 OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]' npx --yes @truefoundry/trueforge@latest
    ```
-   Open http://localhost:8790 (or `--port N`). The VS Code command **FORGE: Start TrueForge (local mode)** does this for you. Keep it on localhost (TrueForge documents local mode as personal-use, no login).
-2. **Configure models** in TrueForge → Settings → Models (catalog provider + key, or a `custom` OpenAI-compatible endpoint, e.g. a local model). Configure **two** to enable automatic fallback. Keys never touch FORGE or this repo.
-3. **Tell FORGE which models to use** (VS Code settings, see `config/forge.example.json`): `forge.model.primary`, `forge.model.fallbacks`, `forge.trueforge.baseUrl` (default `http://localhost:8790`).
+   Open http://localhost:8790 (or `--port N`). The VS Code command **QuantForge: Start TrueForge (local mode)** does this for you. Keep it on localhost (TrueForge documents local mode as personal-use, no login).
+2. **Configure models** in TrueForge → Settings → Models (catalog provider + key, or a `custom` OpenAI-compatible endpoint, e.g. a local model). Configure **two** to enable automatic fallback. Keys never touch QuantForge or this repo.
+3. **Tell QuantForge which models to use** (VS Code settings, see `config/forge.example.json`): `forge.model.primary`, `forge.model.fallbacks`, `forge.trueforge.baseUrl` (default `http://localhost:8790`).
 4. **Agent definitions** are in `agents/` (`forge-agent.json`, `forge-inline-edit.json` + instructions). The extension injects the model name and creates an **inline spec** session per task; TrueForge shows each session/turn/tool call under its **Sessions** page.
-5. **Tool registration** is automatic: on activation FORGE starts its MCP server on `127.0.0.1:<random>` with a per-run bearer token and registers it in TrueForge via `POST /api/v1/settings/mcp-servers`. Without VS Code: `npm run forge:setup -- --workspace <dir> --tf http://localhost:8790`.
+5. **Tool registration** is automatic: on activation QuantForge starts its MCP server on `127.0.0.1:<random>` with a per-run bearer token and registers it in TrueForge via `POST /api/v1/settings/mcp-servers`. Without VS Code: `npm run forge:setup -- --workspace <dir> --tf http://localhost:8790`.
 
 ## 9. Development Setup
 
@@ -207,11 +207,11 @@ If TrueForge hosted mode with login is ever used, the ID token is kept in VS Cod
 
 ## 12. Security
 
-- **Local-first:** TrueForge local mode, a loopback-only MCP server (bearer token, Origin check), no FORGE backend, no telemetry. Source code leaves the machine only through the model endpoint *you* configured in TrueForge (use a local OpenAI-compatible endpoint to keep it on-device).
-- **Secrets:** FORGE stores none. `.env*`, keys and certificates are excluded from tools by default. Never commit keys; the repo ships an example config only.
+- **Local-first:** TrueForge local mode, a loopback-only MCP server (bearer token, Origin check), no QuantForge backend, no telemetry. Source code leaves the machine only through the model endpoint *you* configured in TrueForge (use a local OpenAI-compatible endpoint to keep it on-device).
+- **Secrets:** QuantForge stores none. `.env*`, keys and certificates are excluded from tools by default. Never commit keys; the repo ships an example config only.
 - **Workspace boundaries:** every tool path is normalized, realpath-checked and confined to the workspace; symlink escapes and traversal are rejected; untrusted workspaces are read-only.
 - **Tool approvals:** terminal commands require your approval *and* pass a default-deny allowlist; they run in a shadow copy where proposed edits are applied, not in your working tree.
-- **Safe modifications:** the agent can only *propose* edits. Writing requires your explicit approval of the review (per hunk), re-checks file hashes first, applies atomically, and records an undo snapshot. FORGE keeps its own state outside your repo so a failed run leaves `git status` clean.
+- **Safe modifications:** the agent can only *propose* edits. Writing requires your explicit approval of the review (per hunk), re-checks file hashes first, applies atomically, and records an undo snapshot. QuantForge keeps its own state outside your repo so a failed run leaves `git status` clean.
 - **Untrusted content:** repository text and tool output are treated as data, not instructions (prompt-injection hardening; residual risks are listed in [plan.md §H](context/plan.md#h-risk-register)).
 
 Implemented and tested: loopback+bearer+Origin checks, path/symlink/secret denial, terminal allowlist and env scrubbing, no-write-before-approval, undo refusing to clobber. Not implemented: log redaction audit, CI secret scan. See [architecture.md §F](context/architecture.md#f-security-and-safety).
@@ -244,9 +244,9 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 - Local models need `MODEL_HTTP_HEADERS_TIMEOUT_MS=300000` on TrueForge and a larger `forge.stallTimeoutMs`.
 - The React UI (`client-end/`) is not independently verified by me inside VS Code; the extension falls back to a compact built-in page. VSIX is per-platform (bundled ripgrep) and unsigned.
 - Only the active session is persisted/resumable (no multi-session history list).
-- VS Code has no stable inline-diff API: FORGE uses CodeLens + native diff editor + sidebar, not first-party inline chat diffs.
-- TrueForge has no shipped automatic model fallback, so FORGE's fallback starts a *new* TrueForge session with a progress summary (TrueForge-internal state is not carried over).
-- TrueForge must be launched with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'`, otherwise it refuses FORGE's loopback tool server.
+- VS Code has no stable inline-diff API: QuantForge uses CodeLens + native diff editor + sidebar, not first-party inline chat diffs.
+- TrueForge has no shipped automatic model fallback, so QuantForge's fallback starts a *new* TrueForge session with a progress summary (TrueForge-internal state is not carried over).
+- TrueForge must be launched with `OUTBOUND_URL_ALLOWED_HOSTS='["127.0.0.1"]'`, otherwise it refuses QuantForge's loopback tool server.
 - Python and TypeScript/JavaScript only; the shadow workspace re-copies the file list per command (fine for Flask; unmeasured at 10k+ files).
 - Flask 3.1.3's tests need `pytest < 9`.
 - Competition timing: Round 1 closes 20 Nov 2026 23:59 IST; the demo video and the final write-up PDF are outstanding.
@@ -262,7 +262,7 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 
 ## 17. Licence and Attribution
 
-- **FORGE licence:** MIT — see [LICENSE](LICENSE); bundled dependency licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+- **QuantForge licence:** MIT — see [LICENSE](LICENSE); bundled dependency licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 - **Fork point:** **from scratch** — no upstream editor project (Cline, Continue, Roo Code, opencode, …) has been forked or copied. The frontend starts from the `create-next-app` template (Next.js and its dependencies are open-source; their licences ship inside `client-end/node_modules/*`). If code is ever reused from another project, this section must list the upstream repository URL and exact commit, preserve its licence, and describe the delta.
 - **TrueForge** is MIT-licensed (verified from its repository) and used as an external runtime/SDK dependency, not vendored.
 - **Flask** (`pallets/flask`) is used only as an external test fixture for the demo; it is cloned separately, not vendored, and keeps its own licence.
@@ -270,4 +270,4 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 ## 18. Acknowledgements
 
 - [TrueFoundry](https://www.truefoundry.com/) for TrueForge and the Forge-a-thon; [Techfest, IIT Bombay](https://techfest.org/) for hosting.
-- Open-source projects FORGE builds on or is informed by: TrueForge, Model Context Protocol, VS Code, Tree-sitter, ripgrep, SQLite, React, Next.js, Tailwind CSS, shadcn/ui, Lucide, jsdiff, esbuild, Vitest, Playwright; and the editor-agent community projects (Cline, Continue, Roo Code, opencode) whose public work set the bar — none of their code is used.
+- Open-source projects QuantForge builds on or is informed by: TrueForge, Model Context Protocol, VS Code, Tree-sitter, ripgrep, SQLite, React, Next.js, Tailwind CSS, shadcn/ui, Lucide, jsdiff, esbuild, Vitest, Playwright; and the editor-agent community projects (Cline, Continue, Roo Code, opencode) whose public work set the bar — none of their code is used.

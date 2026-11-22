@@ -1,4 +1,4 @@
-/* Headless runner: serves FORGE's editor tools over MCP for a workspace folder, with no VS Code involved.
+/* Headless runner: serves QuantForge's editor tools over MCP for a workspace folder, with no VS Code involved.
  * Used for local development, CI and the Flask evaluation harness. Prints the URL + token as JSON on stdout. */
 import path from "node:path";
 import { createToolContext } from "./runtime.js";

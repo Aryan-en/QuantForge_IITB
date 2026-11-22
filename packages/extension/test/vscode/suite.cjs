@@ -80,7 +80,7 @@ exports.run = async () => {
     }, 150);
 
     if (scenario === "resume1") {
-      // Window 1: start the task, wait until FORGE is paused on the Review Gate with state persisted, then quit VS Code (a "reload").
+      // Window 1: start the task, wait until QuantForge is paused on the Review Gate with state persisted, then quit VS Code (a "reload").
       void c.runTask("Treat the values 'off' and 'n' as false as well, case-insensitively, and update the docstring to list every value that is treated as false.", "inline", header);
       const t0 = Date.now();
       while (!(c.state.approval && c.state.approval.tool === "submit_changes") && Date.now() - t0 < 30000) await sleep(100);

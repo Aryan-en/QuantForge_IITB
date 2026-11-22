@@ -20,7 +20,7 @@ export type ForgeEvent =
   | { type: "review.settled"; decision: string }
   | { type: "timeline"; event: TimelineEvent };
 
-/** Lets the host abort every in-flight tool call (user pressed Stop). TrueForge's cancel waits for running MCP calls, so FORGE must abort its own. */
+/** Lets the host abort every in-flight tool call (user pressed Stop). TrueForge's cancel waits for running MCP calls, so QuantForge must abort its own. */
 export class CancelRegistry {
   private ctl = new AbortController();
   get signal(): AbortSignal {
@@ -33,7 +33,7 @@ export class CancelRegistry {
   }
 }
 
-/** Output sizes tuned to the smallest model FORGE may use, so tool results never overflow a small model's context window. */
+/** Output sizes tuned to the smallest model QuantForge may use, so tool results never overflow a small model's context window. */
 export interface OutputLimits {
   defaultBudgetTokens: number;
   maxBudgetTokens: number;

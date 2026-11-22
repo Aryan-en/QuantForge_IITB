@@ -1,6 +1,6 @@
-# FORGE — client-end (frontend)
+# QuantForge — client-end (frontend)
 
-React UI for FORGE. One component source, two entry points ([ADR-009](../context/architecture.md)):
+React UI for QuantForge. One component source, two entry points ([ADR-009](../context/architecture.md)):
 
 | Entry | Command | Purpose |
 |---|---|---|

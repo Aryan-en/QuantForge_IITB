@@ -7,7 +7,7 @@ import { ShadowWorkspace } from "./shadow.js";
 
 export interface RuntimeOptions {
   root: string;
-  /** Where FORGE keeps shadow copies and the undo journal. MUST be outside the workspace (ADR-013). */
+  /** Where QuantForge keeps shadow copies and the undo journal. MUST be outside the workspace (ADR-013). */
   storageDir?: string;
   sessionId?: string;
   shadow?: boolean;

@@ -1,5 +1,5 @@
 /**
- * Eligibility guard (FORGE-015): FORGE code must never call a model provider directly — all model access goes
+ * Eligibility guard (FORGE-015): QuantForge code must never call a model provider directly — all model access goes
  * through TrueForge. Fails CI if a provider SDK is imported/declared or a provider API host appears in shipped source.
  */
 import { describe, it, expect } from "vitest";

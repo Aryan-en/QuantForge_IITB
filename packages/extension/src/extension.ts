@@ -10,7 +10,7 @@ import { openDiff, PROPOSED_SCHEME, ProposedContentProvider } from "./reviewUi.j
 export interface ForgeExports { controller: ForgeController }
 
 export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeExports> {
-  const out = vscode.window.createOutputChannel("FORGE");
+  const out = vscode.window.createOutputChannel("QuantForge");
   ctx.subscriptions.push(out);
   // Assets bundled next to the extension (require.resolve is unavailable inside a bundle).
   setWasmDir(path.join(ctx.extensionPath, "dist", "wasm"));
@@ -22,7 +22,7 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeExpor
     await controller.init();
   } catch (e) {
     out.appendLine(`init failed: ${String(e)}`);
-    void vscode.window.showErrorMessage(`FORGE failed to start: ${String(e)}`);
+    void vscode.window.showErrorMessage(`QuantForge failed to start: ${String(e)}`);
   }
 
   const provider: vscode.WebviewViewProvider = {
@@ -51,16 +51,16 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeExpor
   reg("forge.openAgent", () => vscode.commands.executeCommand("forge.sidebar.focus"));
   reg("forge.newSession", () => { controller.state.messages = []; controller.state.timeline = []; controller.state.plan = []; controller.state.context = null; controller.state.sessionId = null; controller.push(); });
   reg("forge.cancel", () => controller.cancel());
-  reg("forge.checkConnection", async () => { await controller.checkConnection(); void vscode.window.showInformationMessage(controller.state.connection === "ok" ? "FORGE: connected to TrueForge." : "FORGE: TrueForge is not reachable."); });
+  reg("forge.checkConnection", async () => { await controller.checkConnection(); void vscode.window.showInformationMessage(controller.state.connection === "ok" ? "QuantForge: connected to TrueForge." : "QuantForge: TrueForge is not reachable."); });
   reg("forge.resume", () => controller.resumeTask());
   reg("forge.openSettings", () => vscode.commands.executeCommand("workbench.action.openSettings", "@ext:forge-dev.forge forge."));
   reg("forge.startTrueForge", () => {
-    // TrueForge blocks loopback outbound URLs by default (SSRF guard); FORGE's editor tools live on loopback, so allow exactly 127.0.0.1.
+    // TrueForge blocks loopback outbound URLs by default (SSRF guard); QuantForge's editor tools live on loopback, so allow exactly 127.0.0.1.
     // Its default model-response timeout is 20 s, which misclassifies a slow LOCAL model (first token > 20 s) as 'unreachable'; allow 5 min.
     const term = vscode.window.createTerminal({ name: "TrueForge (local mode)", env: { OUTBOUND_URL_ALLOWED_HOSTS: '["127.0.0.1"]', MODEL_HTTP_HEADERS_TIMEOUT_MS: "300000", MODEL_HTTP_BODY_TIMEOUT_MS: "300000" } });
     term.show();
     term.sendText("npx --yes @truefoundry/trueforge@latest");
-    void vscode.window.showInformationMessage("Starting TrueForge… open http://localhost:8790 → Settings → Models to add a model, then run “FORGE: Check TrueForge Connection”.");
+    void vscode.window.showInformationMessage("Starting TrueForge… open http://localhost:8790 → Settings → Models to add a model, then run “QuantForge: Check TrueForge Connection”.");
   });
   reg("forge.review.acceptAll", () => controller.bulk("acceptAll"));
   reg("forge.review.rejectAll", () => controller.bulk("rejectAll"));
@@ -72,8 +72,8 @@ export async function activate(ctx: vscode.ExtensionContext): Promise<ForgeExpor
   reg("forge.inlineEdit", async () => {
     const ed = vscode.window.activeTextEditor;
     const root = controller.root();
-    if (!ed || ed.selection.isEmpty || !root) { void vscode.window.showInformationMessage("Select some code first, then run FORGE: Inline Edit."); return; }
-    const instruction = await vscode.window.showInputBox({ title: "FORGE — inline edit", prompt: "What should change in the selected code?", placeHolder: "e.g. treat 'off' as false and update the docstring", ignoreFocusOut: true });
+    if (!ed || ed.selection.isEmpty || !root) { void vscode.window.showInformationMessage("Select some code first, then run QuantForge: Inline Edit."); return; }
+    const instruction = await vscode.window.showInputBox({ title: "QuantForge — inline edit", prompt: "What should change in the selected code?", placeHolder: "e.g. treat 'off' as false and update the docstring", ignoreFocusOut: true });
     if (!instruction) return;
     const sel = ed.selection;
     const rel = vscode.workspace.asRelativePath(ed.document.uri, false);

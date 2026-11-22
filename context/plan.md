@@ -1,4 +1,4 @@
-# FORGE — Product Plan and Implementation Roadmap
+# QuantForge — Product Plan and Implementation Roadmap
 
 > **Frontend location:** the frontend lives in this repository at `/Users/aryansingh/Documents/QuantForge_IITB/` in the `client-end/` workspace (see [architecture.md ADR-009](architecture.md#i-architectural-decision-records)).
 > **Role of this file:** defines the *sequence* of implementation. The system design is in [architecture.md](architecture.md); implementation reality is in [progress_tracker.md](progress_tracker.md); UI rules in [Ui-regitry.md](Ui-regitry.md); AI-contributor rules in [Agents.md](Agents.md).
@@ -9,7 +9,7 @@
 
 ## A. Product Objectives
 
-**Vision.** FORGE is an editor-native autonomous engineering agent for VS Code that understands a whole repository, plans, edits many files, verifies, and hands every change to the developer for review — "Think. Understand. Engineer. Verify."
+**Vision.** QuantForge is an editor-native autonomous engineering agent for VS Code that understands a whole repository, plans, edits many files, verifies, and hands every change to the developer for review — "Think. Understand. Engineer. Verify."
 
 **Target users.** (1) Professional developers working in repositories too large to paste into a prompt; (2) maintainers doing cross-cutting changes (CLI command + tests + docs); (3) teams that want model choice and local control (models and keys live in TrueForge).
 
@@ -37,7 +37,7 @@
 | C1 Video (≤ 4 min) | 10 | Tasks A, B, C in order, each verified on screen; TrueForge session shown during B; no cuts between instruction and diff | `eval/` + `docs/demo.md` | 11 |
 | C2 Write-up (1–3 page PDF, 8 fixed headings) | 15 | Architecture, context strategy, model setup, trade-offs, accurate scorecard with timestamps, honest limitations | `docs/writeup/` (FORGE-070) | 11–12 |
 
-**Mandatory submission artefacts (all public before the deadline; non-public links are not scored):** demo video; write-up PDF with the eight headings in the statement's order (Team · Starting point · Architecture on TrueForge · How context is selected · Model setup · Scorecard · Tools used · Known limitations); public GitHub repository whose README has setup that works from a clean clone, how to start TrueForge locally and load the agent definition, the declared fork point, and an example model configuration file. **Eligibility gate (pass/fail):** agent loop on TrueForge; extension is a TrueForge client; editor capabilities exposed as MCP tools; TrueForge local mode; models configured in TrueForge (no direct provider calls); demo shows the Task B session (turns and tool calls); agent definition in the repo. A visible **open-source licence** is required (rule 7). **Judge call:** shortlisted teams repeat Task A live with an organiser-chosen model — FORGE must work with any TrueForge-configured model (no model-specific prompts or code paths).
+**Mandatory submission artefacts (all public before the deadline; non-public links are not scored):** demo video; write-up PDF with the eight headings in the statement's order (Team · Starting point · Architecture on TrueForge · How context is selected · Model setup · Scorecard · Tools used · Known limitations); public GitHub repository whose README has setup that works from a clean clone, how to start TrueForge locally and load the agent definition, the declared fork point, and an example model configuration file. **Eligibility gate (pass/fail):** agent loop on TrueForge; extension is a TrueForge client; editor capabilities exposed as MCP tools; TrueForge local mode; models configured in TrueForge (no direct provider calls); demo shows the Task B session (turns and tool calls); agent definition in the repo. A visible **open-source licence** is required (rule 7). **Judge call:** shortlisted teams repeat Task A live with an organiser-chosen model — QuantForge must work with any TrueForge-configured model (no model-specific prompts or code paths).
 
 **Long-term goals.** More languages, change-impact preview, project memory, multiple agent roles, team-grade review workflows — all without a mandatory hosted backend.
 
@@ -89,7 +89,7 @@ All numbers are **targets**, not guarantees; each gets a validation task in Phas
 | Performance | Extension activation < 300 ms; no host task > 50 ms blocking; first streamed token visible < 100 ms after event; `search_workspace` p95 < 1.5 s on 10k files; cancel reflected in UI < 200 ms |
 | Reliability | 0 workspace writes without accept (tested); a failed/cancelled run leaves `git status` clean; undo restores byte-identical pre-state; host crash mid-apply recoverable via journal |
 | Security | Loopback-only MCP with bearer token; path traversal and symlink escape blocked; terminal default-deny; untrusted-content envelope; Workspace Trust honored; no secrets in repo/logs |
-| Privacy | No FORGE telemetry in v1; code leaves machine only via the user's TrueForge model config; documented in README |
+| Privacy | No QuantForge telemetry in v1; code leaves machine only via the user's TrueForge model config; documented in README |
 | Maintainability | TypeScript `strict`; modules with single responsibility; `context-engine`/`diff-engine` free of `vscode` imports; ≥ 80% line coverage on those two packages (target) |
 | Extensibility | Language = grammar + query file; new tool = schema + handler + test; new agent = JSON in `agents/` |
 | Accessibility | WCAG 2.1 AA targets in webview: keyboard-complete, visible focus, ARIA live regions for streaming/status, contrast ≥ 4.5:1, reduced-motion respected |
@@ -124,15 +124,15 @@ Dependency order is strict: do not start a phase before its prerequisites meet t
 | S6 shadow workspace on Flask | Works with an editable install: `pytest tests/test_cli.py` inside the shadow reports **56 passed** (55 baseline + the new test), which is impossible if it had imported the real tree. |
 | Tree-sitter packaging | `web-tree-sitter` 0.27 + `tree-sitter-wasms` are **incompatible** (dylink format). Switched to Microsoft's matched `@vscode/tree-sitter-wasm`. |
 | Fixture gotcha | Flask 3.1.3's tests import `notset` from pytest internals; **pytest < 9** is required. |
-| Cancellation semantics | TrueForge's `sessions.cancel` *waits* for running MCP calls; FORGE therefore aborts its own tool calls (`CancelRegistry`) and routes MCP `notifications/cancelled` to the in-flight request (stateless transport). Verified: processes are reaped. |
-| Deferred tool loading | `preload_tools` offers listed tools directly and the rest via `call_tool({mcp_server,tool_name,input})`. FORGE preloads the 8 essential tools so weaker models are not forced through indirection. |
+| Cancellation semantics | TrueForge's `sessions.cancel` *waits* for running MCP calls; QuantForge therefore aborts its own tool calls (`CancelRegistry`) and routes MCP `notifications/cancelled` to the in-flight request (stateless transport). Verified: processes are reaped. |
+| Deferred tool loading | `preload_tools` offers listed tools directly and the rest via `call_tool({mcp_server,tool_name,input})`. QuantForge preloads the 8 essential tools so weaker models are not forced through indirection. |
 
 ### Phase 1 — Extension foundation
 1. **Objective:** Activatable extension with sidebar webview and a validated message bridge.
 2. **Tasks:** `packages/protocol` zod schemas; `packages/extension` activation, commands, `WebviewViewProvider`, CSP; `client-end/webview` esbuild entry with host bridge; design tokens; Welcome screen shell; provider-call lint guard.
 3. **Files:** `packages/protocol/src/*`, `packages/extension/src/{extension,webview,commands}.ts`, `client-end/webview/{main.tsx,bridge.ts}`, `client-end/styles/tokens.css`, `client-end/components/ui/*`.
 4. **Deps:** Phase 0.
-5. **Output:** F5 launches Extension Development Host showing FORGE sidebar with Welcome screen; ping/pong message round-trip.
+5. **Output:** F5 launches Extension Development Host showing QuantForge sidebar with Welcome screen; ping/pong message round-trip.
 6. **Testing:** Vitest for schemas; `@vscode/test-electron` smoke (activates, view registered); Playwright against the Next harness for Welcome.
 7. **Acceptance:** invalid messages are rejected and logged; no network requests from webview; CSP verified.
 8. **Risks:** Next.js config (`cacheComponents`) leaks into shared components; webview asset path issues.

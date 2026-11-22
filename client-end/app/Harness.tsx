@@ -118,7 +118,7 @@ export function Harness() {
           <ActivityBar />
           {layout === "sidebar" ? (
             <>
-              <aside aria-label="FORGE" style={{ width: sidebarWidth }} className="shrink-0 border-r border-border">
+              <aside aria-label="QuantForge" style={{ width: sidebarWidth }} className="shrink-0 border-r border-border">
                 <ForgeApp mentionSource={MENTION_SOURCE} initialDraft={draft} />
               </aside>
               <EditorPane inlineText={inlineText} onCloseInline={() => setInlineText(null)} />
@@ -127,7 +127,7 @@ export function Harness() {
             <div className="flex min-w-0 flex-1 flex-col">
               <div className="flex h-9 shrink-0 items-end border-b border-border bg-bg">
                 <div className="flex h-9 items-center gap-1.5 border-r border-t-2 border-border border-t-accent bg-surface px-3 text-secondary text-fg">
-                  <ForgeMark className="size-3.5 text-accent" /> FORGE
+                  <ForgeMark className="size-3.5 text-accent" /> QuantForge
                 </div>
               </div>
               <div className="min-h-0 flex-1">
@@ -189,7 +189,7 @@ function ActivityBar() {
       ))}
       <span className="relative grid size-9 place-items-center text-fg">
         <span aria-hidden className="absolute inset-y-1.5 left-0 w-0.5 rounded-r bg-accent" />
-        <Bot size={19} strokeWidth={1.5} aria-label="FORGE" />
+        <Bot size={19} strokeWidth={1.5} aria-label="QuantForge" />
       </span>
     </nav>
   );
@@ -366,7 +366,7 @@ function EditorPane({ inlineText, onCloseInline }: { inlineText: string | null; 
                     </>
                   ) : (
                     <span className="flex items-center gap-1 text-faint">
-                      <Sparkles size={11} aria-hidden /> Ctrl+Alt+K to edit with FORGE
+                      <Sparkles size={11} aria-hidden /> Ctrl+Alt+K to edit with QuantForge
                     </span>
                   ),
                 )

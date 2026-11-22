@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MentionSchema, PathSchema, RangeSchema } from "./common.js";
 
-/** Input schemas for every MCP tool exposed by FORGE (architecture.md §B.4). All strict. */
+/** Input schemas for every MCP tool exposed by QuantForge (architecture.md §B.4). All strict. */
 export const ReadFileInput = z.object({ path: PathSchema, range: RangeSchema.optional() }).strict();
 export const SearchWorkspaceInput = z
   .object({

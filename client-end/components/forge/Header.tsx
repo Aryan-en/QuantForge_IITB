@@ -161,7 +161,7 @@ export function Header({
     <header role="banner" className="flex flex-col border-b border-border bg-bg">
       <div className="flex h-9 items-center gap-1.5 px-2">
         <ForgeMark className={cn("size-3.5 shrink-0", running ? "text-accent" : "text-fg")} />
-        <span className="shrink-0 text-meta font-bold tracking-[0.14em] text-fg">FORGE</span>
+        <span className="shrink-0 text-meta font-bold tracking-[0.14em] text-fg">QuantForge</span>
         <span className="mx-0.5 h-3 w-px shrink-0 bg-border" aria-hidden />
         <SessionSwitcher sessions={sessions} activeId={activeSessionId} onSelect={onSelectSession} onNew={onNewSession} />
         <div className="ml-auto flex min-w-0 shrink items-center gap-0.5">

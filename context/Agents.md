@@ -1,4 +1,4 @@
-# Agents.md — Operating Instructions for AI Coding Agents Working on FORGE
+# Agents.md — Operating Instructions for AI Coding Agents Working on QuantForge
 
 > **Layout note:** the six governing documents live in `context/` (this file, architecture, plan, Ui-regitry, progress_tracker) plus `README.md` at the repository root. `client-end/` now holds the owner's React UI; treat it as the owner's work and do not modify it without being asked.
 
@@ -10,7 +10,7 @@
 
 ## A. Agent Identity
 
-You are an autonomous senior software engineer contributing to **FORGE**, a VS Code extension whose agent loop runs on **TrueForge**. You must:
+You are an autonomous senior software engineer contributing to **QuantForge**, a VS Code extension whose agent loop runs on **TrueForge**. You must:
 
 - **Understand before modifying.** Read the code and the docs; never edit from assumptions.
 - **Inspect existing code before creating new modules.** Reuse what exists.
@@ -59,14 +59,14 @@ If documentation and code disagree, the code is the truth for *what exists*, the
 
 ## D. Architecture Boundaries (strictly enforced)
 
-- **TrueForge owns the agent loop.** Never write a plan→act→observe loop, a tool-dispatch loop, a prompt-chaining orchestrator, or retry-until-success logic that re-prompts a model. FORGE creates TrueForge sessions, sends turns, renders events, answers approvals.
+- **TrueForge owns the agent loop.** Never write a plan→act→observe loop, a tool-dispatch loop, a prompt-chaining orchestrator, or retry-until-success logic that re-prompts a model. QuantForge creates TrueForge sessions, sends turns, renders events, answers approvals.
 - **The extension talks to TrueForge** only through `@truefoundry/trueforge-sdk` (or its documented HTTP API) via `packages/trueforge-client`.
 - **Editor capabilities are exposed through MCP** (`packages/editor-mcp`). The *agent* decides which tools to call and which files to read; the extension must not pre-select files for the agent except explicit user `@mentions`.
 - **The webview talks to the extension host** only through validated message contracts in `packages/protocol` (zod). The webview never touches the filesystem, network, or TrueForge.
 - **The Context Engine stays modular** (`packages/context-engine`, no `vscode` import).
 - **Diff application is controlled by the extension** (`packages/diff-engine` + `extension/src/review`). The only writer of workspace files is the Diff Engine apply path, triggered by a human decision (the approval-gated `submit_changes` Review Gate or the local-review fallback).
-- **Model provider calls go through TrueForge.** Never import a provider SDK (`openai`, `@anthropic-ai/sdk`, `@google/genai`, …) or call a provider URL from FORGE code. CI guardrail FORGE-015 enforces this. Embeddings, if ever added, also route through TrueForge-configured models or run locally.
-- **FORGE state lives in extension storage**, never inside the user's workspace (ADR-013).
+- **Model provider calls go through TrueForge.** Never import a provider SDK (`openai`, `@anthropic-ai/sdk`, `@google/genai`, …) or call a provider URL from QuantForge code. CI guardrail FORGE-015 enforces this. Embeddings, if ever added, also route through TrueForge-configured models or run locally.
+- **QuantForge state lives in extension storage**, never inside the user's workspace (ADR-013).
 - **No unnecessary backend:** no hosted service, database server, auth system, or telemetry.
 - **No model-specific behavior.** Prompts, parsing, and flows must work with any TrueForge-configured model (judges may substitute one).
 
@@ -167,7 +167,7 @@ Never:
 - claim incomplete features are implemented (docs, README, commit messages, final report);
 - replace working architecture without an ADR;
 - introduce infrastructure outside the approved scope (no cloud DB, no hosted backend, no auth system, no telemetry);
-- write FORGE scratch state into the user's workspace;
+- write QuantForge scratch state into the user's workspace;
 - add model-provider-specific code paths;
 - remove or edit the auto-generated `client-end/AGENTS.md` block.
 

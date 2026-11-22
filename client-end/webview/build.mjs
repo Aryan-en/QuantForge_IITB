@@ -32,4 +32,4 @@ execFileSync(
   [path.join(root, "node_modules", "@tailwindcss", "cli", "dist", "index.mjs"), "-i", path.join(root, "webview", "webview.css"), "-o", path.join(out, "main.css"), ...(watch ? ["--minify"] : [])],
   { stdio: "inherit", cwd: root },
 );
-console.log("FORGE webview built ->", out);
+console.log("QuantForge webview built ->", out);
