@@ -4,8 +4,8 @@
 
 FORGE is an AI software-engineering agent for Visual Studio Code. You describe a task in plain language; FORGE finds the relevant code in your repository, plans the change, edits several files, runs your tests, and shows every modification as a reviewable diff before anything touches disk. The agent loop runs on [TrueForge](https://github.com/truefoundry/trueforge) (TrueFoundry's open-source agent harness); FORGE is the editor-native client and tool provider.
 
-> ### Project status (2026-11-20)
-> The backend and VS Code extension are **built and verified with a scripted model**: 79 unit/integration tests, 11 live tests against **real TrueForge** and the **real Flask 3.1.3** repo, and 86 checks inside a **real VS Code** (Task A inline edit, automatic fallback, unreachable-endpoint error, resume across a real restart; `git status` clean afterwards). **No real LLM has been run against the three tasks yet**, the React UI in `client-end/` is built and tested on its own (7 Playwright + axe checks) but is **not yet loaded by the extension**, which still ships its simple built-in webview (`packages/extension/src/webviewHtml.ts`). Full evidence and gaps: [context/progress_tracker.md](context/progress_tracker.md).
+> ### Project status (2026-11-22)
+> Backend, VS Code extension and a React UI are in place. Verified: **111** unit/MCP/UI/guard tests, **14** live tests against **real TrueForge + real Flask 3.1.3**, and **106** checks across 5 scenarios inside a **real VS Code** (Task A, automatic fallback, unreachable endpoint, resume across a real restart, cancel at 22 ms) — `git status` clean after each. With a **real local model (qwen3-8b)**: Task A passes 3/3, Task C's fallback works, **Task B has not passed** (the laptop is too slow to measure it). No strong/hosted model has been tested yet. Details: [context/progress_tracker.md](context/progress_tracker.md).
 >
 > **Frontend location:** `/Users/aryansingh/Documents/QuantForge_IITB/client-end/`.
 >
@@ -43,16 +43,18 @@ Legend: ✅ implemented and verified (with a scripted model — see status box) 
 | Feature | Status | Notes |
 |---|---|---|
 | Inline edit (`Cmd/Ctrl+Alt+K`) | ✅ | Selection + instruction → proposal → native diff, per-hunk CodeLens Accept/Reject, apply, undo. Verified in real VS Code |
-| Autonomous agent mode | ✅ | TrueForge loop + 11 MCP tools; Task B edits 3 files none named in the prompt; commands verified in a shadow copy |
+| Autonomous agent mode | ✅ | TrueForge loop + 12 MCP tools; Task B edits 3 files none named in the prompt; commands verified in a shadow copy |
 | Context engine | ✅ | ripgrep + Tree-sitter (Python, TS/JS) + import graph + test affinity; IDF-weighted ranking; tiered token budget (hard cap); reasons and exclusions |
 | Context inspector + `@` picker | ✅ | Sidebar tab shows items, tiers, tokens, reasons, exclusions, budget; `@` dropdown suggests files and symbols |
 | Diff review & safety | ✅ | Hunks, per-hunk accept/reject, apply via `WorkspaceEdit`, undo journal, stale/conflict detection; nothing is written before approval |
 | Review Gate | ✅ | `submit_changes` is approval-gated by TrueForge; its approval *is* the review |
+| Completeness gate | ✅ | `verify_changes` makes the agent map every requirement to a line it *added*; FORGE declines `submit_changes` before asking you until it passes. Lifted a real 8B model from 0/3 to 3/3 on Task A |
+| Model-aware output sizing | ✅ | Context budget, file reads and command output are sized to the smallest model's context window |
 | Streaming | ✅ | Token deltas (coalesced per frame) and tool events stream to the sidebar |
 | Cancellation | ✅ | Stop aborts TrueForge's turn *and* FORGE's running tools; process groups reaped; tree stays clean |
 | Model resilience | ✅ | Real TrueForge error payloads classified; backoff with jitter; stall detection; automatic fallback to a second configured model |
 | Execution timeline / plan | 🟡 | Basic tabs in a vanilla sidebar |
-| React UI per the UI registry | 📐 | Not built; `client-end/` untouched |
+| React UI per the UI registry | 🟡 | Built in `client-end/` (components, mock host, Playwright e2e per its own tests) and bundled to `dist/webview`, preferred by the extension; the built-in page is the fallback. I did not run it inside VS Code myself |
 | Resume after window reload | ✅ | Persists the turn, review queue and conversation; offers *Resume*; verified across a real VS Code restart |
 | Crash recovery of applied changes | ✅ | Intent/commit journal; reconciled at startup |
 | Persistent symbol index (SQLite FTS5) | ✅ | Optional, incremental, falls back automatically |
@@ -96,7 +98,7 @@ Versions are pinned in the package manifests.
 | React 19 | Webview UI | Present in `client-end/` (`react 19.3.0`) |
 | Next.js 16 | Component gallery / mock-host harness | Present in `client-end/` (`next 16.4.6`, unmodified starter) |
 | Tailwind CSS 4 | Styling via design tokens | Present in `client-end/` (`tailwindcss 4.3.3`) |
-| shadcn/ui, Lucide | Primitives and icons | Planned (React UI not built) |
+| shadcn/ui, Lucide | Primitives and icons | See `client-end/` |
 | Tree-sitter (`@vscode/tree-sitter-wasm`, WASM) | Symbol extraction, skeleton compression | Present |
 | ripgrep (`@vscode/ripgrep`) | Workspace search | Present |
 | SQLite + FTS5 | Optional persistent symbol index | Planned (optional) |
@@ -125,7 +127,7 @@ Versions are pinned in the package manifests.
 git clone <repo-url> QuantForge_IITB && cd QuantForge_IITB
 npm ci                    # installs all workspaces (packages/*)
 npm run typecheck         # strict TypeScript, 6 packages
-npm test                  # 79 unit + MCP + eligibility-guard tests
+npm test                  # 111 unit + MCP + UI + eligibility-guard tests
 node scripts/build.mjs    # bundles the extension to packages/extension/dist (+ wasm, ripgrep, agents)
 ```
 The competition fixture (needs Python ≥ 3.9, git, network): `eval/setup-flask.sh` (clones Flask 3.1.3, asserts commit `22d92470`, creates a venv with an editable install and `pytest<9`).
@@ -171,7 +173,7 @@ QuantForge_IITB/
 │  ├─ protocol/                   zod schemas: webview messages, MCP tool inputs, shared types
 │  ├─ diff-engine/                hunks, review queue, apply/undo journal (no vscode import)
 │  ├─ context-engine/             ripgrep + Tree-sitter retrieval, ranking, token budget (no vscode import)
-│  ├─ editor-mcp/                 MCP server, 11 tools, path safety, terminal policy, shadow workspace, headless runner
+│  ├─ editor-mcp/                 MCP server, 12 tools (incl. `verify_changes`), path safety, terminal policy, shadow workspace, headless runner
 │  ├─ trueforge-client/           SDK wrapper, turn runner, error classifier, retry/fallback, scripted fake model (tests)
 │  └─ extension/                  VS Code extension: controller, review UI, sidebar, WorkspaceEdit store
 ├─ agents/                        TrueForge agent definitions + instructions (loaded at runtime)
@@ -230,7 +232,7 @@ Review and accept the hunks (≥ 3 files must change), then `pytest tests/test_c
 
 **Task C — Resilience.** Configure TrueForge with an unreachable endpoint or invalid key, repeat Task A, and show: editor stays responsive; a clear error (or automatic fallback to a second configured model); `git status` shows no changed files.
 
-**Status:** the three tasks pass end-to-end with a *scripted* model in `eval/run-fixed-tasks.sh` (real TrueForge, real Flask, real VS Code). They have **not** been run with a real LLM yet — see [progress_tracker.md](context/progress_tracker.md).
+**Status:** the three tasks pass end-to-end with a *scripted* model in `eval/run-fixed-tasks.sh`. With a *real local 8B model*: Task A passes 3/3, Task C's fallback works, Task B has not passed. See the results table in [progress_tracker.md](context/progress_tracker.md).
 
 ## 14. Roadmap
 
@@ -238,8 +240,9 @@ M0 setup & spikes → M1 TrueForge foundation → M2 MCP editor integration → 
 
 ## 15. Limitations
 
-- **No real-model results yet.** All end-to-end tests use a scripted fake model; success rates, models used and cost for Tasks A/B/C are unmeasured.
-- The React UI of the UI registry is not built (`client-end/` untouched); the sidebar is a compact vanilla-JS UI. VSIX is per-platform (bundled ripgrep) and unsigned.
+- **Real-model evidence is thin.** One local 8B model (Task A 3/3, Task C fallback OK, **Task B not achieved**). Scripted-model suites prove plumbing, not quality. No hosted/strong model has been run.
+- Local models need `MODEL_HTTP_HEADERS_TIMEOUT_MS=300000` on TrueForge and a larger `forge.stallTimeoutMs`.
+- The React UI (`client-end/`) is not independently verified by me inside VS Code; the extension falls back to a compact built-in page. VSIX is per-platform (bundled ripgrep) and unsigned.
 - Only the active session is persisted/resumable (no multi-session history list).
 - VS Code has no stable inline-diff API: FORGE uses CodeLens + native diff editor + sidebar, not first-party inline chat diffs.
 - TrueForge has no shipped automatic model fallback, so FORGE's fallback starts a *new* TrueForge session with a progress summary (TrueForge-internal state is not carried over).

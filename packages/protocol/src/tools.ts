@@ -51,6 +51,14 @@ export const ProposeEditInput = z
 export const SubmitChangesInput = z
   .object({ summary: z.string().min(1).max(4000), proposalIds: z.array(z.string()).max(200).optional() })
   .strict();
+export const VerifyChangesInput = z
+  .object({
+    checklist: z
+      .array(z.object({ requirement: z.string().min(3).max(300), evidence: z.string().min(3).max(400) }).strict())
+      .min(1)
+      .max(20),
+  })
+  .strict();
 export const RunTerminalInput = z
   .object({
     command: z.string().min(1).max(2000),
@@ -89,6 +97,7 @@ export const TOOL_NAMES = [
   "get_file_structure",
   "get_context",
   "propose_edit",
+  "verify_changes",
   "submit_changes",
   "run_terminal",
   "get_diagnostics",
@@ -103,6 +112,7 @@ export type FindSymbolInput = z.infer<typeof FindSymbolInput>;
 export type GetFileStructureInput = z.infer<typeof GetFileStructureInput>;
 export type GetContextInput = z.infer<typeof GetContextInput>;
 export type ProposeEditInput = z.infer<typeof ProposeEditInput>;
+export type VerifyChangesInput = z.infer<typeof VerifyChangesInput>;
 export type SubmitChangesInput = z.infer<typeof SubmitChangesInput>;
 export type RunTerminalInput = z.infer<typeof RunTerminalInput>;
 export type GetDiagnosticsInput = z.infer<typeof GetDiagnosticsInput>;

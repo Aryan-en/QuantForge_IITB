@@ -1,0 +1,67 @@
+{
+ "at": "2026-11-22T06:29:55.159Z",
+ "tf": "http://localhost:18790",
+ "model": "ollama/qwen3-forge",
+ "params": {
+  "reasoning_effort": "none"
+ },
+ "results": [
+  {
+   "diff": "diff --git a/src/flask/helpers.py b/src/flask/helpers.py\nindex 5d412c90..94fa5bf8 100644\n--- a/src/flask/helpers.py\n+++ b/src/flask/helpers.py\n@@ -28,9 +28,10 @@ if t.TYPE_CHECKING:  # pragma: no cover\n def get_debug_flag() -> bool:\n     \"\"\"Get whether debug mode should be enabled for the app, indicated by the\n     :envvar:`FLASK_DEBUG` environment variable. The default is ``False``.\n+    All values treated as false: \"0\", \"false\", \"no\", \"off\", \"n\".\n     \"\"\"\n     val = os.environ.get(\"FLASK_DEBUG\")\n-    return bool(val and val.lower() not in {\"0\", \"false\", \"no\"})\n+    return bool(val and val.lower() not in {\"0\", \"false\", \"no\", \"off\", \"n\"})\n \n \n def get_load_dotenv(default: bool = True) -> bool:\n",
+   "proposed": [],
+   "usedSafetyNet": false,
+   "task": "A",
+   "model": "ollama/qwen3-forge",
+   "modelsTried": [
+    "ollama/qwen3-forge"
+   ],
+   "status": "done",
+   "passed": true,
+   "checks": [
+    {
+     "name": "turn completed",
+     "pass": true,
+     "detail": "done "
+    },
+    {
+     "name": "FLASK_DEBUG=off → False (statement's verification)",
+     "pass": true,
+     "detail": "False"
+    },
+    {
+     "name": "'n', 'N', 'OFF' → False",
+     "pass": true
+    },
+    {
+     "name": "existing behaviour kept: 0/false/no → False, 1/true → True",
+     "pass": true
+    },
+    {
+     "name": "docstring lists every false value (0, false, no, off, n)",
+     "pass": true,
+     "detail": "Get whether debug mode should be enabled for the app, indicated by the :envvar:`FLASK_DEBUG` environment variable. The default is ``False``. All values treated "
+    },
+    {
+     "name": "only src/flask/helpers.py changed",
+     "pass": true,
+     "detail": "src/flask/helpers.py"
+    }
+   ],
+   "toolTrace": [
+    "read_file",
+    "propose_edit",
+    "verify_changes",
+    "propose_edit",
+    "read_file",
+    "propose_edit",
+    "verify_changes",
+    "submit_changes"
+   ],
+   "subagents": 0,
+   "durationS": 149,
+   "tokens": 33407,
+   "finalText": "The changes have been applied. The function now treats 'off' and 'n' as false case-insensitively, and the docstring has been updated to list all values treated as false.",
+   "notices": []
+  }
+ ]
+}

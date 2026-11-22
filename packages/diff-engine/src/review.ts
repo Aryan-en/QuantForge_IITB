@@ -40,6 +40,7 @@ export interface ProposeInput {
 
 export interface QueueSnapshot {
   v: 1;
+  verified?: boolean;
   proposals: { id: string; path: string; kind: "modify" | "create" | "delete"; baseText: string | null; proposedText: string | null; rationale: string; turnId: string | undefined; fromCancelledTurn: boolean; states: Record<string, string> }[];
 }
 
@@ -64,6 +65,10 @@ export interface UndoReport {
 export class ReviewQueue {
   private proposals = new Map<string, Proposal>();
   private lastBatchId: string | null = null;
+  /** Bumped on every proposal change; verification is only valid for the version it was made against. */
+  private version = 0;
+  private verifiedVersion = -1;
+  private gateDenials = 0;
 
   constructor(private readonly store: FileStore, private readonly journal: UndoJournal) {}
 
@@ -141,19 +146,41 @@ export class ReviewQueue {
       fromCancelledTurn: false,
     };
     this.proposals.set(proposal.id, proposal);
+    this.version++;
     return { proposal };
+  }
+
+  /** The agent proved (verify_changes) that every requirement maps to a line it added, for the CURRENT set of proposals. */
+  markVerified(): void {
+    this.verifiedVersion = this.version;
+    this.gateDenials = 0;
+  }
+  isVerified(): boolean {
+    return this.verifiedVersion === this.version;
+  }
+  /**
+   * Called by whoever answers TrueForge's approval for `submit_changes`, BEFORE the human is asked. Declines (twice at most) when the
+   * agent has not verified its requirement checklist, so a model that did half the task is sent back instead of wasting a review.
+   */
+  submitGate(): { pass: true; unverified?: boolean } | { pass: false; reason: string } {
+    if (this.list().length === 0 || this.isVerified()) return { pass: true };
+    if (this.gateDenials >= 2) return { pass: true, unverified: true };
+    this.gateDenials++;
+    return { pass: false, reason: "Not reviewed yet: call verify_changes first with a checklist that maps EVERY requirement of the task to evidence (an exact line you added with propose_edit). If a requirement has no evidence, add the missing edit with propose_edit, then verify_changes, then call submit_changes again." };
   }
 
   /** Serialisable snapshot so pending proposals survive a window reload. Hunks are recomputed on restore (ids are stable). */
   snapshot(): QueueSnapshot {
     return {
       v: 1,
+      verified: this.isVerified(),
       proposals: this.list().map((p) => ({ id: p.id, path: p.path, kind: p.kind, baseText: p.baseText, proposedText: p.proposedText, rationale: p.rationale, turnId: p.turnId, fromCancelledTurn: p.fromCancelledTurn, states: Object.fromEntries(p.states) })),
     };
   }
   /** Replace the queue with a snapshot, then re-check every hunk against the current files. */
   async restore(s: QueueSnapshot): Promise<void> {
     this.proposals.clear();
+    this.gateDenials = 0;
     if (s?.v !== 1) return;
     for (const sp of s.proposals) {
       const baseHash = sp.baseText === null ? null : contentHash(sp.baseText);
@@ -163,6 +190,8 @@ export class ReviewQueue {
         states: new Map(hunks.map((h) => [h.id, (sp.states[h.id] ?? "pending") as HunkState])), turnId: sp.turnId, fromCancelledTurn: sp.fromCancelledTurn,
       });
     }
+    this.version++;
+    if (s.verified) this.verifiedVersion = this.version;
     await this.refresh();
   }
 

@@ -75,6 +75,7 @@ Priority key: **P0** competition-critical · **P1** essential product · **P2** 
 | FR-24 | Review Gate: approval-gated `submit_changes` drives diff review through TrueForge (ADR-014) | P0 | rubric B4 |
 | FR-25 | Use ≥1 TrueForge context-engineering feature (subagents for discovery, deferred tool loading, compaction), visible in the session (ADR-015) | P0 | rubric B1/B4 |
 | FR-26 | Submission artefacts: example model config, fork-point declaration, licence, write-up PDF, demo video | P0 | statement |
+| FR-28 | Completeness gate: `verify_changes` + submit gate (ADR-017) | P0 | measured real-model gain |
 | FR-27 | Model-agnostic behaviour: works with any TrueForge-configured model, incl. local OpenAI-compatible endpoints | P0 | fairness rule |
 
 ---
@@ -326,7 +327,7 @@ Status values: NOT STARTED · IN PROGRESS · BLOCKED · IN REVIEW · COMPLETED. 
 | FORGE-070 | Write-up PDF (8 mandated headings, accurate scorecard with video timestamps, honest limitations) | P0 | FORGE-064 | 1–3 pages; headings in order | NOT STARTED |
 | FORGE-071 | `submit_changes` Review Gate tool + approval-driven review flow + local-review safety net | P0 | FORGE-027, FORGE-034 | Allow applies accepted hunks only; Deny applies none; agent receives applied/rejected lists | COMPLETED |
 | FORGE-072 | Agent spec tuning: subagent delegation for discovery, deferred tool loading, compaction; show in session | P0 | FORGE-018, FORGE-046 | Subagent `thread.created` events and deferred loading visible in a Task B session | IN REVIEW |
-| FORGE-073 | Model-agnostic validation: run Tasks A–C on ≥2 distinct models incl. one local/OpenAI-compatible; no model-specific code | P0 | FORGE-062 | Results table in write-up | NOT STARTED |
+| FORGE-073 | Model-agnostic validation: run Tasks A–C on ≥2 distinct models incl. one local/OpenAI-compatible; no model-specific code | P0 | FORGE-062 | Results table in write-up | IN PROGRESS |
 | FORGE-074 | Demo video (≤ 4 min, Tasks A→B→C, on-screen verification, TrueForge session during B) | P0 | FORGE-062 | Public link | NOT STARTED |
 | FORGE-075 | Submission checklist: public repo, public video link, PDF link, no secrets, LICENSE | P0 | FORGE-066–070, FORGE-074 | All links open logged-out | NOT STARTED |
 

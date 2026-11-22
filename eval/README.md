@@ -15,3 +15,7 @@ They use a **scripted, deterministic fake model** (`packages/trueforge-client/sr
 2. Open `eval/work/flask` in VS Code (add `.venv` or set `forge.agent.pythonBin` to `eval/work/venv/bin`).
 3. Task A / B / C exactly as in `context/plan.md §G`.
 Record model names, where they ran and cost for the write-up.
+
+## Real-model runs (honest results)
+`npm run eval:real -- --model <provider/model> --task A|B|C|all [--fallback-from <dead/model>] [--params '{"reasoning_effort":"none"}'] [--stall-sec 600]` runs the fixed tasks through TrueForge with a **real** model, simulates the reviewer accepting every hunk, verifies with the statement's own commands, and writes pass **and** fail to `eval/results/`. Last results (qwen3-8b via Ollama, 16 GB laptop): Task A 3/3, Task C fallback OK, Task B not achieved (model calls took 2–4 min). See `context/progress_tracker.md`.
+Local-model setup: `ollama create qwen3-forge -f Modelfile` with `FROM qwen3:8b` / `PARAMETER num_ctx 16384`; add it in TrueForge as a `custom` provider (`http://127.0.0.1:11434/v1`, model id `qwen3-forge`, `context_length 16384`); start TrueForge with `MODEL_HTTP_HEADERS_TIMEOUT_MS=300000`.

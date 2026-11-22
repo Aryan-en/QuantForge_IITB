@@ -12,7 +12,7 @@ import path from "node:path";
 import { startFakeModel, type FakeModelServer, type Policy } from "../../src/testing/fake-model.js";
 import { runTurn, runResilient, TrueForgeApi, type ForgeStreamEvent, type Notice } from "../../src/index.js";
 import { ensureTrueForge, cloneFlask, gitStatus, registerProvider, startRig, haveFixture, VENV_BIN, type TF, type ForgeRig } from "./harness.js";
-import { TASK_A, TASK_B, taskAPolicy, taskBPolicy, isSubagentRequest, subagentPolicy } from "./policies.js";
+import { TASK_A, TASK_B, taskAPolicy, taskAWeakPolicy, taskAEagerPolicy, taskBPolicy, isSubagentRequest, subagentPolicy } from "./policies.js";
 
 let tf: TF;
 const cleanup: (() => Promise<void> | void)[] = [];
@@ -38,8 +38,13 @@ async function scenario(policy: Policy): Promise<Scenario> {
 }
 
 /** The extension's job in production: show approvals, collect the human's per-hunk decisions, answer TrueForge. */
+const gateDenials: string[] = [];
 function humanApprover(rig: ForgeRig, mode: "accept-all" | "deny-submit" | "accept-first-hunk-only", log: string[]) {
   return async (call: { tool: string; args: string }) => {
+    if (call.tool === "submit_changes") {
+      const g = rig.ctx.review.submitGate(); // same gate the extension applies before asking the human
+      if (!g.pass) { gateDenials.push(g.reason); return { status: "deny" as const, reason: g.reason }; }
+    }
     log.push(call.tool);
     if (call.tool === "run_terminal") return { status: "allow" as const };
     if (call.tool === "submit_changes") {
@@ -67,7 +72,7 @@ describe.skipIf(!haveFixture)("Task A — inline edit (scripted model, real True
     expect(out.status).toBe("done");
     expect(approvals).toEqual(["submit_changes"]); // exactly one human gate, for the Review Gate
     const calls = events.filter((e) => e.type === "tool.call").map((e: any) => e.call.tool);
-    expect(calls).toEqual(["read_file", "propose_edit", "submit_changes"]);
+    expect(calls).toEqual(["read_file", "propose_edit", "verify_changes", "submit_changes"]);
     expect(events.some((e) => e.type === "text.delta")).toBe(true); // streamed
     expect(events.filter((e) => e.type === "paused").length).toBe(1);
 
@@ -93,6 +98,41 @@ describe.skipIf(!haveFixture)("Task A — inline edit (scripted model, real True
     expect(gitStatus(s.ws)).toBe("");
     const lastReq = s.fake.requests[s.fake.requests.length - 1]!;
     expect(JSON.stringify(lastReq.messages)).toMatch(/developer rejected the changes/);
+  }, 120_000);
+});
+
+describe.skipIf(!haveFixture)("Completeness gate: weak / over-eager models are sent back before the human is asked", () => {
+  it("WEAK MODEL (measured failure): fixes the code, skips the docstring, falsely claims it → verify_changes rejects → model adds the docstring → applied with BOTH parts", async () => {
+    const s = await scenario((req) => taskAWeakPolicy(req));
+    const sessionId = await tf.api.createSession(await s.rig.specFor("forge-inline-edit")(s.model));
+    const approvals: string[] = [];
+    const events: ForgeStreamEvent[] = [];
+    const out = await runTurn(tf.api.sdk, { sessionId, text: TASK_A, onEvent: (e) => events.push(e), onApproval: humanApprover(s.rig, "accept-all", approvals) });
+    expect(out.status).toBe("done");
+    const verifyResults = events.filter((e) => e.type === "tool.result" && (e as any).tool === "verify_changes") as any[];
+    expect(verifyResults).toHaveLength(2);
+    expect(verifyResults[0].ok).toBe(false); // first claim rejected
+    expect(verifyResults[0].preview).toMatch(/INVALID_INPUT: .*NOT covered/); // readable, unwrapped from TrueForge's error envelope
+    expect(verifyResults[1].ok).toBe(true);
+    expect(approvals).toEqual(["submit_changes"]); // the human was asked ONCE, only after the work was complete
+    const src = readFileSync(path.join(s.ws, "src/flask/helpers.py"), "utf8");
+    expect(src).toContain('{"0", "false", "no", "off", "n"}');
+    expect(src).toMatch(/``off`` and ``n`` \(case-insensitive\)/); // the half the weak model skipped is now there
+    expect(gitStatus(s.ws).trim()).toBe("M src/flask/helpers.py");
+  }, 120_000);
+
+  it("OVER-EAGER MODEL: submit_changes without verify_changes is declined by FORGE itself — the human is never prompted for the premature attempt", async () => {
+    gateDenials.length = 0;
+    const s = await scenario((req) => taskAEagerPolicy(req));
+    const sessionId = await tf.api.createSession(await s.rig.specFor("forge-inline-edit")(s.model));
+    const approvals: string[] = [];
+    const out = await runTurn(tf.api.sdk, { sessionId, text: TASK_A, onApproval: humanApprover(s.rig, "accept-all", approvals) });
+    expect(out.status).toBe("done");
+    expect(gateDenials).toHaveLength(1);
+    expect(gateDenials[0]).toMatch(/call verify_changes first/);
+    expect(approvals).toEqual(["submit_changes"]); // exactly one human prompt: the verified one
+    expect(JSON.stringify(s.fake.requests[s.fake.requests.length - 1]!.messages)).toMatch(/Not reviewed yet/); // the model was told why
+    expect(gitStatus(s.ws).trim()).toBe("M src/flask/helpers.py");
   }, 120_000);
 });
 

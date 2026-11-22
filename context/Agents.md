@@ -1,6 +1,6 @@
 # Agents.md — Operating Instructions for AI Coding Agents Working on FORGE
 
-> **Layout note:** the six governing documents live in `context/` (this file, architecture, plan, Ui-regitry, progress_tracker) plus `README.md` at the repository root. `client-end/` is frozen by owner instruction until told otherwise: do not modify it.
+> **Layout note:** the six governing documents live in `context/` (this file, architecture, plan, Ui-regitry, progress_tracker) plus `README.md` at the repository root. `client-end/` now holds the owner's React UI; treat it as the owner's work and do not modify it without being asked.
 
 > This is the governing guide for any AI coding agent (Claude Code or otherwise) contributing to this repository. Follow it exactly.
 > **Frontend location:** the frontend lives in this repository at `/Users/aryansingh/Documents/QuantForge_IITB/client-end/`. All UI work happens there.
@@ -106,7 +106,7 @@ For every meaningful change:
 
 **Report failures honestly.** Never claim tests passed without having run them in this session; paste the command and the outcome. If you could not run something, say so and why. Do not delete or weaken tests to make them pass.
 
-Commands that exist and were verified on 2026-11-20: `npm run typecheck` (6 packages, exit 0), `npm test` (79 passed incl. the eligibility guard), `npm run test:live` (11 passed; real TrueForge + Flask + scripted model), `npm run test:vscode` (86 checks in a real VS Code, 4 scenarios), `eval/run-fixed-tasks.sh` (all of the above). Scripted-model results prove plumbing only, never model quality; report real-model results separately. In `client-end/`: `npx tsc --noEmit` and `npm run lint` passed on the untouched starter.
+Commands that exist and were verified on 2026-11-20: `npm run typecheck` (6 packages, exit 0), `npm test` (111 passed incl. the eligibility guard), `npm run test:live` (14 passed; real TrueForge + Flask + scripted model), `npm run test:vscode` (106 checks in a real VS Code, 5 scenarios), `npm run eval:real` (real model via TrueForge; results in `eval/results/`), `eval/run-fixed-tasks.sh` (all of the above). Scripted-model results prove plumbing only, never model quality; report real-model results separately. In `client-end/`: `npx tsc --noEmit` and `npm run lint` passed on the untouched starter.
 
 ---
 

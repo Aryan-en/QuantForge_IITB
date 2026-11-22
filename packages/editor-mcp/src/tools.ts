@@ -6,11 +6,12 @@ import { assembleContext, renderBundle, estimateTokens } from "@forge/context-en
 import { contentHash, ProposeError } from "@forge/diff-engine";
 import {
   fail, ReadFileInput, SearchWorkspaceInput, FindSymbolInput, GetFileStructureInput, GetContextInput, ProposeEditInput,
-  SubmitChangesInput, RunTerminalInput, GetDiagnosticsInput, GetGitStatusInput, UpdatePlanInput, type ToolFailure,
+  SubmitChangesInput, VerifyChangesInput, RunTerminalInput, GetDiagnosticsInput, GetGitStatusInput, UpdatePlanInput, type ToolFailure,
 } from "@forge/protocol";
 import type { Handler, ToolContext } from "./context.js";
 import { isFailure, looksBinary, resolveWorkspacePath, truncate } from "./safety.js";
 import { evaluateCommand } from "./policy.js";
+import { checkChecklist } from "./verify.js";
 import { runProcess, scrubbedEnv } from "./terminal.js";
 
 const MAX_READ_BYTES = 512 * 1024;
@@ -191,7 +192,7 @@ const propose_edit = def({
   name: "propose_edit",
   title: "Propose an edit (does not write)",
   description:
-    "Propose a change to ONE file. Nothing is written to disk: proposals are queued for human review. Prefer `edits` with {oldText,newText} (oldText must match exactly once, copied WITHOUT line-number prefixes); {range:{startLine,endLine},newText} replaces whole lines (1-based, inclusive; empty newText deletes). Use newContent (+create:true) for new files, delete:true to remove a file. Pass baseHash from read_file. Always include a short rationale. After all proposals are queued you MUST call submit_changes once — proposals alone are discarded.",
+    "Propose a change to ONE file. Nothing is written to disk: proposals are queued for human review. Prefer `edits` with {oldText,newText} (oldText must match exactly once, copied WITHOUT line-number prefixes); {range:{startLine,endLine},newText} replaces whole lines (1-based, inclusive; empty newText deletes). Use newContent (+create:true) for new files, delete:true to remove a file. Pass baseHash from read_file. Always include a short rationale. After all proposals are queued call verify_changes, then submit_changes — proposals alone are discarded.",
   schema: ProposeEditInput,
   annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
   async handler(input, ctx) {
@@ -206,11 +207,32 @@ const propose_edit = def({
       ctx.emit({ type: "proposal", proposalId: proposal.id, path: proposal.path });
       const added = proposal.hunks.reduce((n, h) => n + h.added, 0);
       const removed = proposal.hunks.reduce((n, h) => n + h.removed, 0);
-      return { ok: true, proposalId: proposal.id, status: "queued", kind: proposal.kind, hunks: proposal.hunks.length, linesAdded: added, linesRemoved: removed, nextContentHash: proposal.proposedText === null ? null : contentHash(proposal.proposedText), note: "queued for review; nothing has been written. NEXT STEP: call submit_changes (your work is discarded otherwise) once all edits are proposed." };
+      return { ok: true, proposalId: proposal.id, status: "queued", kind: proposal.kind, hunks: proposal.hunks.length, linesAdded: added, linesRemoved: removed, nextContentHash: proposal.proposedText === null ? null : contentHash(proposal.proposedText), note: "queued for review; nothing has been written. NEXT STEP: when ALL edits are proposed call verify_changes (checklist of every requirement with an added line as evidence), then submit_changes — your work is discarded otherwise." };
     } catch (e) {
       if (e instanceof ProposeError) return fail(e.code, e.message, e.code === "STALE_BASE" ? "call read_file again and retry with the new contentHash" : undefined);
       throw e;
     }
+  },
+});
+
+// ------------------------------------------------------------------ verify_changes
+const verify_changes = def({
+  name: "verify_changes",
+  title: "Verify every requirement is covered",
+  description:
+    "Call this after all propose_edit calls and BEFORE submit_changes. List every separate requirement of the task (e.g. 'treat off as false', 'update the docstring', 'add a test', 'document it') and, for each, quote an EXACT line you added with propose_edit that implements it. Each requirement needs its own line. If any requirement has no evidence you are not done: propose the missing edit, then call verify_changes again. submit_changes is declined until this passes.",
+  schema: VerifyChangesInput,
+  annotations: { readOnlyHint: true, idempotentHint: true },
+  async handler(input, ctx) {
+    const proposals = ctx.review.list();
+    if (proposals.length === 0) return fail("NOT_FOUND", "nothing is queued; call propose_edit first");
+    const { ok, results } = checkChecklist(input.checklist, proposals);
+    if (!ok) {
+      const bad = results.filter((r) => !r.ok);
+      return fail("INVALID_INPUT", `${bad.length} requirement(s) are NOT covered:\n${bad.map((r) => `- "${r.requirement}": ${r.reason}`).join("\n")}`, "propose_edit the missing change(s), then call verify_changes again");
+    }
+    ctx.review.markVerified();
+    return { ok: true, verified: true, covered: results.map((r) => ({ requirement: r.requirement, path: r.path })), next: "now call submit_changes" };
   },
 });
 
@@ -348,7 +370,7 @@ const update_plan = def({
   },
 });
 
-export const TOOLS = [read_file, search_workspace, find_symbol, get_file_structure, get_context, propose_edit, submit_changes, run_terminal, get_diagnostics, get_git_status, update_plan] as const;
+export const TOOLS = [read_file, search_workspace, find_symbol, get_file_structure, get_context, propose_edit, verify_changes, submit_changes, run_terminal, get_diagnostics, get_git_status, update_plan] as const;
 export type AnyToolDef = (typeof TOOLS)[number];
 
 export async function callTool(name: string, rawInput: unknown, ctx: ToolContext, signal: AbortSignal): Promise<unknown> {

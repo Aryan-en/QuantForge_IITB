@@ -76,8 +76,21 @@ export async function runTurn(client: TrueForge, o: RunTurnOptions): Promise<Tur
       case "tool.response": {
         const c = String(ev.content ?? "");
         let ok = true;
-        try { ok = (JSON.parse(c) as { ok?: boolean }).ok !== false; } catch { /* non-JSON tool output */ }
-        emit({ type: "tool.result", callId: ev.toolCallId, tool: toolNames.get(ev.toolCallId), ok, preview: c.slice(0, 300), threadId: ev.threadId ?? "main" });
+        let preview = c;
+        try {
+          const j = JSON.parse(c) as { ok?: boolean; error?: unknown };
+          if (j && j.error !== undefined) {
+            // TrueForge wraps an MCP tool failure as {"error":[{"type":"text","text":"<tool json>"}]}
+            ok = false;
+            const inner = Array.isArray(j.error) ? j.error.map((x: { text?: string }) => x?.text ?? "").join("") : String(j.error);
+            preview = inner;
+            try {
+              const jj = JSON.parse(inner) as { error?: { code?: string; message?: string } };
+              if (jj.error?.message) preview = `${jj.error.code ?? "ERROR"}: ${jj.error.message}`;
+            } catch { /* inner text is not JSON */ }
+          } else if (j?.ok === false) ok = false;
+        } catch { /* non-JSON tool output */ }
+        emit({ type: "tool.result", callId: ev.toolCallId, tool: toolNames.get(ev.toolCallId), ok, preview: preview.slice(0, 300), threadId: ev.threadId ?? "main" });
         break;
       }
       case "tool.approval_required": {

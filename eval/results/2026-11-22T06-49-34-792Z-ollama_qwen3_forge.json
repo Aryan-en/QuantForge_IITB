@@ -1,0 +1,70 @@
+{
+ "at": "2026-11-22T06:49:34.793Z",
+ "tf": "http://localhost:18790",
+ "model": "ollama/qwen3-forge",
+ "params": {
+  "reasoning_effort": "none"
+ },
+ "results": [
+  {
+   "diff": "",
+   "proposed": [],
+   "usedSafetyNet": false,
+   "task": "B",
+   "model": "ollama/qwen3-forge",
+   "modelsTried": [
+    "ollama/qwen3-forge"
+   ],
+   "status": "error",
+   "passed": false,
+   "checks": [
+    {
+     "name": "turn completed",
+     "pass": false,
+     "detail": "error TRUEFORGE_UNREACHABLE: TrueForge is not reachable"
+    },
+    {
+     "name": "prompt names no files",
+     "pass": true
+    },
+    {
+     "name": "≥3 files changed (statement requires ≥3)",
+     "pass": false
+    },
+    {
+     "name": "touches the CLI module, a test and docs",
+     "pass": false
+    },
+    {
+     "name": "pytest tests/test_cli.py -q passes (statement's verification)",
+     "pass": true,
+     "detail": "55 passed, 3 skipped in 0.60s"
+    },
+    {
+     "name": "`flask --help` lists config",
+     "pass": false
+    },
+    {
+     "name": "`flask config` prints JSON",
+     "pass": false
+    },
+    {
+     "name": "sensitive values masked as \"***\", others visible",
+     "pass": false
+    }
+   ],
+   "toolTrace": [
+    "get_context",
+    "get_file_structure"
+   ],
+   "subagents": 0,
+   "durationS": 601,
+   "tokens": null,
+   "finalText": "TrueForge is not reachable: terminated",
+   "notices": [
+    "failed: TrueForge is not reachable"
+   ],
+   "error": "TRUEFORGE_UNREACHABLE: TrueForge is not reachable"
+  }
+ ]
+}

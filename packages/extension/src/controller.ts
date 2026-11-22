@@ -46,6 +46,7 @@ export class ForgeController implements vscode.Disposable {
   private watcher: vscode.FileSystemWatcher | null = null;
   private deltaBuf = "";
   private deltaTimer: NodeJS.Timeout | null = null;
+  private bypassGateOnce = false;
   private detach = new AbortController();
   private disposed = false;
   private storageFile = "";
@@ -162,6 +163,7 @@ export class ForgeController implements vscode.Disposable {
     await this.checkConnection();
     if (this.state.connection !== "ok") return;
     this.inlineMode = this.rec.mode === "inline";
+    this.bypassGateOnce = true; // the approval being resumed was already past the gate (or deliberately let through) before the reload
     this.abort = new AbortController();
     Object.assign(this.state, { running: true, stream: "", notice: null });
     void vscode.commands.executeCommand("setContext", "forge.running", true);
@@ -302,6 +304,17 @@ export class ForgeController implements vscode.Disposable {
   }
 
   private approvalFor(call: ToolCallInfo): Promise<ApprovalDecision> {
+    if (call.tool === "submit_changes") {
+      // Completeness gate: send a model back BEFORE asking the human if it has not shown every requirement is covered.
+      const g: ReturnType<typeof this.tool.review.submitGate> = this.bypassGateOnce ? { pass: true } : this.tool.review.submitGate();
+      this.bypassGateOnce = false;
+      if (!g.pass) {
+        this.timeline({ kind: "approval.decided", title: "submit_changes declined: run verify_changes first", detail: "the agent must map every requirement to a line it added", status: "error" });
+        this.push();
+        return Promise.resolve({ status: "deny", reason: g.reason });
+      }
+      if (g.unverified) this.timeline({ kind: "approval.requested", title: "submitted without a passing verify_changes", detail: "shown to you for review anyway", status: "running" });
+    }
     let args: Record<string, unknown> = {};
     try { args = JSON.parse(call.args) as Record<string, unknown>; } catch { /* leave empty */ }
     let detail = call.tool === "run_terminal" ? `${String(args.command ?? "")}\n— ${String(args.reason ?? "")}` : `${String(args.summary ?? "")}\n${this.tool.review.list().length} file(s) proposed. Review each hunk, then apply.`;
@@ -443,6 +456,7 @@ export class ForgeController implements vscode.Disposable {
 
   private onToolEvent(e: ForgeEvent): void {
     if (e.type === "proposal") void this.persist();
+    if (e.type === "timeline" && e.event.title === "verify_changes" && e.event.status === "ok") void this.persist(); // keep the 'verified' flag across a reload
     if (e.type === "context") this.state.context = { used: e.bundle.usedTokens, budget: e.bundle.budgetTokens, items: e.bundle.items.map((i) => ({ path: i.path, tier: i.tier, tokens: i.tokens, reasons: i.reasons })), excluded: e.bundle.excluded.slice(0, 40) };
     else if (e.type === "plan") this.state.plan = e.steps;
     this.push();

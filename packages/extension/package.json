@@ -185,7 +185,7 @@
           "type": "number",
           "default": 45000,
           "minimum": 5000,
-          "description": "Treat the model as stalled after this long without any event."
+          "description": "Treat the model as stalled after this long without any event. Default suits hosted models; for a LOCAL model on modest hardware (first token can take minutes) raise it to 300000\u2013600000 and start TrueForge with MODEL_HTTP_HEADERS_TIMEOUT_MS=300000."
         },
         "forge.review.autoOpenOnPause": {
           "type": "boolean",

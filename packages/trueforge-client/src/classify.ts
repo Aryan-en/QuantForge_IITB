@@ -34,8 +34,13 @@ export function classifyMessage(message: string): Classified {
 
 /** Errors thrown by the SDK while talking to TrueForge itself. */
 export function classifyThrown(e: unknown): Classified {
-  const msg = e instanceof Error ? `${e.message} ${(e as { cause?: { code?: string; message?: string } }).cause?.code ?? ""} ${(e as { cause?: { message?: string } }).cause?.message ?? ""}` : String(e);
-  if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|ECONNRESET|ETIMEDOUT|network|socket|Timeout|timed out|UND_ERR/i.test(msg) || (e as { name?: string }).name === "TrueForgeTimeoutError") {
+  const err = e as { name?: string; cause?: { code?: string; message?: string } };
+  const msg = e instanceof Error ? `${e.message} ${err.cause?.code ?? ""} ${err.cause?.message ?? ""}` : String(e);
+  // A TIMEOUT means the server accepted the connection but did not answer in time (slow local model, long prompt): it is alive.
+  if (err.name === "TrueForgeTimeoutError" || /timed out|timeout|UND_ERR_(HEADERS|BODY)_TIMEOUT/i.test(msg) && !/ECONNREFUSED|ENOTFOUND|EAI_AGAIN/i.test(msg)) {
+    return { errorClass: "STALLED", retryable: true, maxAttempts: 2, title: "TrueForge did not answer in time", hint: "TrueForge is running but the model is slow. For local models raise forge.stallTimeoutMs and start TrueForge with MODEL_HTTP_HEADERS_TIMEOUT_MS=300000." };
+  }
+  if (/ECONNREFUSED|ENOTFOUND|EAI_AGAIN|fetch failed|ECONNRESET|network|socket|UND_ERR/i.test(msg)) {
     return { errorClass: "TRUEFORGE_UNREACHABLE", retryable: false, maxAttempts: 1, title: "TrueForge is not reachable", hint: "Start it with “FORGE: Start TrueForge” (npx @truefoundry/trueforge@latest) and check forge.trueforge.baseUrl." };
   }
   if (/\b401\b|\b403\b|unauthor/i.test(msg)) return { errorClass: "TRUEFORGE_UNREACHABLE", retryable: false, maxAttempts: 1, title: "TrueForge rejected the request", hint: "TrueForge may require login (hosted mode); local mode needs none." };

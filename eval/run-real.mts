@@ -19,6 +19,8 @@ if (!model) { console.error("--model <provider/model> required"); process.exit(2
 const failFirst = arg("fallback-from");
 const which = (arg("task", "all")!).toUpperCase();
 const timeoutMs = Number(arg("timeout-min", "12")) * 60_000;
+/** Local models can take minutes to the first token on long prompts; the extension default (45 s) is for hosted models. */
+const stallMs = Number(arg("stall-sec", "600")) * 1000;
 const params = arg("params") ? (JSON.parse(arg("params")!) as Record<string, unknown>) : {};
 
 const api = new TrueForgeApi(tfUrl);
@@ -54,10 +56,13 @@ async function runTask(task: "A" | "B" | "C"): Promise<Result> {
   let tokens: number | null = null, status = "error", finalText = "", error: string | undefined;
   try {
     const res = await runResilient(api, {
-      text, models, specFor: (m) => specs.get(m), signal: ac.signal, stallTimeoutMs: 120_000,
+      text, models, specFor: (m) => specs.get(m), signal: ac.signal, stallTimeoutMs: stallMs,
       onEvent: (e) => { events.push(e); if (e.type === "tool.call") process.stdout.write(`   · ${e.call.tool}\n`); if (e.type === "subagent.start") process.stdout.write(`   ↳ subagent: ${e.title}\n`); },
       onNotice: (n: Notice) => { const s = n.kind === "fallback" ? `fallback ${n.from} -> ${n.to}: ${n.reason}` : n.kind === "retry" ? `retry ${n.attempt} (${n.reason})` : n.kind === "failed" ? `failed: ${n.error.title}` : ""; if (s) { notices.push(s); console.log(`   ! ${s}`); } },
-      onApproval: async (call) => { approvals.push(call.tool); if (call.tool === "submit_changes") ctx.review.decideAll("accept"); return { status: "allow" }; },
+      onApproval: async (call) => {
+        if (call.tool === "submit_changes") { const g = ctx.review.submitGate(); if (!g.pass) { notices.push("submit_changes declined by completeness gate"); console.log("   ! submit_changes declined: verify_changes first"); return { status: "deny", reason: g.reason }; } ctx.review.decideAll("accept"); }
+        approvals.push(call.tool); return { status: "allow" };
+      },
     });
     status = res.outcome?.status ?? (res.error ? "error" : "unknown");
     finalText = res.outcome?.text ?? res.error?.message ?? "";

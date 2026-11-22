@@ -1,20 +1,54 @@
 {
   "x-description": "FORGE inline-edit agent: single-file, selection-scoped edit. Same MCP server, restricted tools, short iteration limit, no subagents.",
-  "model": { "name": "REPLACED_AT_RUNTIME", "params": { "temperature": 0.1 } },
+  "model": {
+    "name": "REPLACED_AT_RUNTIME",
+    "params": {
+      "temperature": 0.1
+    }
+  },
   "mcp_servers": [
     {
       "name": "forge-editor",
-      "enable_tools": ["read_file", "get_file_structure", "find_symbol", "search_workspace", "get_diagnostics", "propose_edit", "submit_changes"],
-      "preload_tools": ["read_file", "find_symbol", "propose_edit", "submit_changes"],
-      "require_approval_for_tools": ["submit_changes"]
+      "enable_tools": [
+        "read_file",
+        "get_file_structure",
+        "find_symbol",
+        "search_workspace",
+        "get_diagnostics",
+        "propose_edit",
+        "verify_changes",
+        "submit_changes"
+      ],
+      "preload_tools": [
+        "read_file",
+        "find_symbol",
+        "propose_edit",
+        "verify_changes",
+        "submit_changes"
+      ],
+      "require_approval_for_tools": [
+        "submit_changes"
+      ]
     }
   ],
   "config": {
-    "sandbox": { "enabled": false },
-    "ask_user_questions": { "enabled": false },
-    "dynamic_sub_agents": { "enabled": false },
-    "generative_ui": { "enabled": false },
-    "context_management": { "compaction": { "enabled": true } },
+    "sandbox": {
+      "enabled": false
+    },
+    "ask_user_questions": {
+      "enabled": false
+    },
+    "dynamic_sub_agents": {
+      "enabled": false
+    },
+    "generative_ui": {
+      "enabled": false
+    },
+    "context_management": {
+      "compaction": {
+        "enabled": true
+      }
+    },
     "iteration_limit": 14
   }
 }

@@ -14,6 +14,40 @@ export const toolResults = (req: ChatRequest): { name: string; json: any }[] => 
   });
 };
 
+export const A_CHECKLIST = [
+  { requirement: "treat 'off' and 'n' as false, case-insensitively", evidence: 'val.lower() not in {"0", "false", "no", "off", "n"}' },
+  { requirement: "update the docstring to list every false value", evidence: "The values ``0``, ``false``, ``no``, ``off`` and ``n`` (case-insensitive) are" },
+];
+const CODE_ONLY = { oldText: '    return bool(val and val.lower() not in {"0", "false", "no"})', newText: '    return bool(val and val.lower() not in {"0", "false", "no", "off", "n"})' };
+const DOC_ONLY = { oldText: "    :envvar:`FLASK_DEBUG` environment variable. The default is ``False``.\n", newText: "    :envvar:`FLASK_DEBUG` environment variable. The default is ``False``.\n\n    The values ``0``, ``false``, ``no``, ``off`` and ``n`` (case-insensitive) are\n    treated as false; any other non-empty value enables debug mode.\n" };
+
+/** A weak model (the measured failure): fixes the code, skips the docstring, then falsely claims both requirements with the code line. */
+export function taskAWeakPolicy(req: ChatRequest): Reply {
+  const res = toolResults(req);
+  const n = res.length;
+  const hash = res.find((r) => r.name === "read_file")?.json?.contentHash;
+  if (n === 0) return { type: "tool_calls", calls: [{ name: "read_file", args: { path: "src/flask/helpers.py", range: { startLine: 25, endLine: 40 } } }] };
+  if (n === 1) return { type: "tool_calls", calls: [{ name: "propose_edit", args: { path: "src/flask/helpers.py", baseHash: hash, edits: [CODE_ONLY], rationale: "treat off and n as false" } }] };
+  if (n === 2) return { type: "tool_calls", calls: [{ name: "verify_changes", args: { checklist: [{ requirement: A_CHECKLIST[0]!.requirement, evidence: A_CHECKLIST[0]!.evidence }, { requirement: A_CHECKLIST[1]!.requirement, evidence: A_CHECKLIST[0]!.evidence }] } }] };
+  if (n === 3) return { type: "tool_calls", calls: [{ name: "propose_edit", args: { path: "src/flask/helpers.py", edits: [DOC_ONLY], rationale: "also update the docstring" } }] };
+  if (n === 4) return { type: "tool_calls", calls: [{ name: "verify_changes", args: { checklist: A_CHECKLIST } }] };
+  if (n === 5) return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "code and docstring updated" } }] };
+  return { type: "text", text: "Done: code and docstring updated." };
+}
+
+/** An over-eager model that tries to submit without verifying; FORGE must send it back WITHOUT asking the human. */
+export function taskAEagerPolicy(req: ChatRequest): Reply {
+  const res = toolResults(req);
+  const n = res.length;
+  const hash = res.find((r) => r.name === "read_file")?.json?.contentHash;
+  if (n === 0) return { type: "tool_calls", calls: [{ name: "read_file", args: { path: "src/flask/helpers.py", range: { startLine: 25, endLine: 40 } } }] };
+  if (n === 1) return { type: "tool_calls", calls: [{ name: "propose_edit", args: { path: "src/flask/helpers.py", baseHash: hash, edits: [CODE_ONLY, DOC_ONLY], rationale: "both parts" } }] };
+  if (n === 2) return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "premature" } }] }; // no verify_changes
+  if (n === 3) return { type: "tool_calls", calls: [{ name: "verify_changes", args: { checklist: A_CHECKLIST } }] };
+  if (n === 4) return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "verified" } }] };
+  return { type: "text", text: "Done." };
+}
+
 /** What a competent model would do for Task A, scripted. Reads real file content from tool results to build exact edits. */
 export function taskAPolicy(req: ChatRequest): Reply {
   const res = toolResults(req);
@@ -42,7 +76,8 @@ export function taskAPolicy(req: ChatRequest): Reply {
     };
     return { type: "tool_calls", calls: [{ name: "propose_edit", args: { path: "src/flask/helpers.py", baseHash: read.contentHash, edits: [edit], rationale: "Treat 'off' and 'n' as false (case-insensitive) and list all false values in the docstring." } }] };
   }
-  if (n === 2) return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "get_debug_flag now treats off and n as false; docstring lists every false value." } }] };
+  if (n === 2) return { type: "tool_calls", calls: [{ name: "verify_changes", args: { checklist: A_CHECKLIST } }] };
+  if (n === 3) return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "get_debug_flag now treats off and n as false; docstring lists every false value." } }] };
   return { type: "text", text: "Updated get_debug_flag in src/flask/helpers.py: 'off' and 'n' are now false (case-insensitive) and the docstring lists all false values. " };
 }
 
@@ -131,7 +166,14 @@ export function taskBPolicy(req: ChatRequest, opts: { discover?: boolean } = {})
     ] } }] };
     case 7: return { type: "tool_calls", calls: [{ name: "propose_edit", args: { path: "docs/cli.rst", baseHash: hash("read_file", "docs/cli.rst"), rationale: "Document the config command next to the other built-in commands.", edits: [{ oldText: "Use :meth:`~Flask.shell_context_processor` to add other automatic imports.\n", newText: DOCS }] } }] };
     case 8: return { type: "tool_calls", calls: [{ name: "run_terminal", args: { command: "pytest tests/test_cli.py -q -p no:cacheprovider", reason: "verify the new command and its test against the proposed edits" } }] };
-    case 9: return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "Add `flask config` (masked JSON), a test, and docs." } }] };
+    case 9: return { type: "tool_calls", calls: [{ name: "verify_changes", args: { checklist: [
+      { requirement: "new built-in `flask config` command", evidence: "def config_command() -> None:" },
+      { requirement: "masks keys containing SECRET, PASSWORD, TOKEN or KEY", evidence: '_SENSITIVE_CONFIG_PARTS = ("SECRET", "PASSWORD", "TOKEN", "KEY")' },
+      { requirement: "appears in flask --help (registered with FlaskGroup)", evidence: "self.add_command(config_command)" },
+      { requirement: "covered by a test", evidence: "def test_config_command_masks_sensitive_values():" },
+      { requirement: "documented alongside the other built-in commands", evidence: "use the ``flask config``" },
+    ] } }] };
+    case 10: return { type: "tool_calls", calls: [{ name: "submit_changes", args: { summary: "Add `flask config` (masked JSON), a test, and docs." } }] };
     default: return n < 5 ? { type: "tool_calls", calls: [{ name: "get_context", args: { query: "continue" } }] } : { type: "text", text: "Added the `flask config` built-in command (src/flask/cli.py), a test (tests/test_cli.py) and docs (docs/cli.rst). pytest tests/test_cli.py passes against the proposed edits." };
   }
 }

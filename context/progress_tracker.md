@@ -12,9 +12,9 @@
 | Field | Value |
 |---|---|
 | Product | FORGE — editor-native coding agent for VS Code; agent loop on TrueForge |
-| Current phase | Backend and extension feature-complete for the planned scope and verified **with a scripted model**; remaining: real-model validation, React UI (frozen), video, write-up, licence |
+| Current phase | Backend and extension feature-complete for the planned scope and verified with a scripted model **and, for Tasks A and C, a real local model**; remaining: a strong-model Task B pass, independent check of the React UI in VS Code, demo video |
 | Overall completion | **≈ 80 %** of engineering scope (demo artefacts and real-model evidence are the rest) (estimate: mean of milestone completion M0–M10 below; weighted equally) |
-| Last updated | 2026-11-20 |
+| Last updated | 2026-11-22 |
 | Product code | `packages/{protocol,diff-engine,context-engine,editor-mcp,trueforge-client,extension}`, `agents/`, `scripts/`, `eval/`, `config/` |
 
 ### What "verified" means here — read this
@@ -27,7 +27,7 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | B1 | **Round 1 deadline is 20 Nov 2026 23:59 IST** (competition PDF). Outstanding mandatory artefacts: demo video, write-up PDF, public repo with `LICENSE`. | Critical | Confirm date; record real-model runs; see [plan.md R14](plan.md#h-risk-register) |
 | B2 | No `LICENSE` file (open-source licence is required). Choosing one is the owner's decision. | Eligibility | Owner picks; FORGE-066 |
 | B3 | No real model has been exercised; behaviour with weaker/local models is unmeasured. | High | Configure ≥2 real models in TrueForge; run Tasks A–C; FORGE-073 |
-| B4 | Frontend (`client-end/`) is the unmodified Next.js starter by instruction; the registry's React UI is not built. The extension ships a vanilla-JS sidebar (tabs, approval card, `@` picker, review) instead. | Medium (C1/UX) | Owner decision on when to build the React UI against `packages/protocol` |
+| B4 | A React UI now exists in `client-end/` (built by the owner after the freeze) and is preferred by the extension; I have **not** verified it inside VS Code. The built-in vanilla page is the fallback. | Medium | Run the extension with `dist/webview` present and exercise it manually |
 | B5 | Nothing is committed from this phase (working tree only). | Low | Owner commits when satisfied |
 | ~~B6~~ | ~~Loopback MCP registration unverified~~ — **resolved** (needs `OUTBOUND_URL_ALLOWED_HOSTS`). | — | [architecture.md §K](architecture.md#k-implementation-notes-verified-findings) |
 | ~~B7~~ | ~~Commit `22d92470` ↔ tag `3.1.3` unverified~~ — **verified** (`release version 3.1.3`). | — | `eval/setup-flask.sh` asserts it |
@@ -37,9 +37,9 @@ All end-to-end results below use a **scripted, deterministic fake model** (`pack
 | Command | Result |
 |---|---|
 | `npx tsc -b packages/*` (strict, 6 packages) | exit 0 |
-| `npx vitest run` | **79 passed** (diff-engine 27, context-engine 26 incl. SQLite + Flask golden, editor-mcp 21, eligibility guard 5) |
-| `npm run test:live` (real TrueForge + real Flask + scripted model) | **11 passed**: Task A ×2, Task B ×2 (3 files, `56 passed` in shadow, masking via real CLI), cancel-and-reap, Task C ×5, **resume after dropped connection** |
-| `npm run test:vscode` (real VS Code 1.146.0, isolated profile) | **86 checks passed** across 4 scenarios: Task A inline, automatic fallback (401), unreachable endpoint error, **resume across a real VS Code quit/restart**; also `@` picker (files + Tree-sitter symbols), sidebar protocol validation, Tree-sitter self-check; `git status` empty after each; worst host stall 81–131 ms |
+| `npx vitest run` | **111 passed** (diff-engine 27, context-engine 26, editor-mcp 30 incl. checklist/gate and output limits, trueforge-client 15 incl. real-payload classifier, sidebar UI 8, eligibility guard 5) |
+| `npm run test:live` (real TrueForge + real Flask + scripted model) | **14 passed**: Task A ×2, Task B ×2, **sub-agent + deferred tool**, **weak-model completeness gate**, **over-eager submit declined**, cancel-and-reap, Task C ×5, resume |
+| `npm run test:vscode` (real VS Code 1.146.0, isolated profile) | **106 checks passed** across 5 scenarios: Task A inline, automatic fallback (401), unreachable endpoint, resume across a real quit/restart, **cancel (UI idle 22 ms after Stop, process tree killed)**; `@` picker, native diff opens automatically, `git status` empty after each. Note: responsiveness checks failed (346/778 ms stalls) while an 8 GB local model was resident and passed again after it was stopped — the stall metric is sensitive to machine load |
 | Installed `.vsix` (`FORGE_VSIX=… npm run test:vscode`) | Task A flow passes from `…/ext/forge-dev.forge-0.1.0` in a clean profile |
 | `eval/setup-flask.sh` asserts it |
 
@@ -81,9 +81,9 @@ Not verified: behaviour inside VS Code; real TrueForge event shapes (spikes S1�
 | React webview | BLOCKED | 10 % | P0 | Unassigned | `client-end/` untouched by instruction; vanilla sidebar ships instead |
 | TrueForge integration | COMPLETED | 95 % | P0 | Unassigned | SDK client, event normaliser, approvals, probe, registration (live tests) |
 | Agent session management | COMPLETED | 95 % | P1 | Unassigned | Persist + resume after real VS Code restart, detach-not-cancel on close; only the active session is kept (no history list) |
-| MCP tool layer | COMPLETED | 100 % | P0 | Unassigned | 11 tools, loopback+bearer, 21 tests, verified through real TrueForge |
+| MCP tool layer | COMPLETED | 100 % | P0 | Unassigned | 12 tools, loopback+bearer, 21 tests, verified through real TrueForge |
 | Inline editing | IN REVIEW | 85 % | P0 | Unassigned | Verified end-to-end in VS Code via `runTask`; input-box command path and keybinding not exercised; real-model run pending |
-| Autonomous agent mode | IN REVIEW | 80 % | P0 | Unassigned | Task B passes live with scripted model; real-model run pending |
+| Autonomous agent mode | IN REVIEW | 70 % | P0 | Unassigned | Task B passes live with scripted model; real-model run pending |
 | Context engine | COMPLETED | 98 % | P0 | Unassigned | Ranking, budget invariant, tiers, reasons, exclusions, `@` suggestions + sidebar picker |
 | Symbol retrieval | COMPLETED | 100 % | P0 | Unassigned | Tree-sitter Python/TS/JS; `find_symbol` |
 | Diff review | COMPLETED | 90 % | P0 | Unassigned | Hunks, review state, native diff, CodeLens, sidebar; added-line decorations absent |
@@ -152,7 +152,7 @@ Not verified: behaviour inside VS Code; real TrueForge event shapes (spikes S1�
 |---|---|---|
 | Agent loop on TrueForge, no second loop | COMPLETED | No provider SDK in code; loop is TrueForge's (FORGE-015 CI guard **not yet written**) |
 | Extension is a TrueForge SDK client | COMPLETED | `@truefoundry/trueforge-sdk` 0.185.0 |
-| Editor capabilities as MCP tools | COMPLETED | 11 tools via loopback MCP |
+| Editor capabilities as MCP tools | COMPLETED | 12 tools via loopback MCP |
 | TrueForge local mode | COMPLETED | all runs use `npx @truefoundry/trueforge@latest` |
 | Models via TrueForge only | COMPLETED | settings hold model *names* only |
 | Agent definition in repo | COMPLETED | `agents/forge-agent.json`, `agents/forge-inline-edit.json` |
@@ -186,6 +186,18 @@ Not verified: behaviour inside VS Code; real TrueForge event shapes (spikes S1�
 
 ---
 
+
+### Real-model results (local qwen3-8b via Ollama, 16 GB laptop; raw JSON in `eval/results/`)
+Run with `npm run eval:real -- --model ollama/qwen3-forge --task A|B|C --params '{"reasoning_effort":"none"}'`. The reviewer is simulated by accepting every hunk. **Failures are kept in the results.**
+
+| Task | Result | Detail |
+|---|---|---|
+| **A** (inline edit) | **3/3 pass** after the completeness gate; **0/3** before it | Before: the model fixed the code and skipped the docstring every time. With `verify_changes` + the submit gate it proposes, is rejected for the missing docstring, adds it, passes the check and submits. All five checks pass: `FLASK_DEBUG=off` → `False`, `n/N/OFF` → `False`, old behaviour kept, docstring lists all five values, only `helpers.py` changed. ~150 s per run |
+| **B** (agent, ≥3 files) | **Not achieved — and not measurable on this hardware** | Best earlier run: real sub-agent delegation and deferred-tool use, then no edits. Later runs: each model call took **2–4 minutes** at 10k-token prompts on a 16 GB laptop, so runs stalled or timed out before any edit. A stronger/faster model is needed to measure A2 honestly; **no real-model Task B pass exists** |
+| **C** (resilience) | **Resilience works; model quality caps the rest** | Dead primary → one retry → automatic fallback to the real model → flow completed, workspace controlled. (Run was before the gate, so the docstring check failed for the same model-quality reason as Task A) |
+
+Lessons that changed the product (all covered by tests): TrueForge's default 20 s model-response timeout misreports a slow local model as "unreachable"; Ollama's default 4096 context truncates silently; `get_context`/`read_file`/command output must be sized to the model's window; reasoning mode is too slow on this hardware; deferred-tool indirection **hurts** small models, so only diagnostics/git status stay deferred.
+
 ## E. Known Bugs and Technical Debt
 
 | ID | Description | Severity | Files | Resolution | Status |
@@ -200,6 +212,11 @@ Not verified: behaviour inside VS Code; real TrueForge event shapes (spikes S1�
 | TD-05 | CI and provider-import guard | Medium | `.github/workflows/ci.yml`, `guard.test.ts` | guard test fails on planted violation; workflow not yet run on GitHub | IN REVIEW |
 | TD-06 | `client-end` still template (page, metadata, Arial/Geist mismatch, `next/font/google`) | Low | `client-end/` | owner decision | BLOCKED |
 | TD-07 | Case-insensitive FS: `Readme.md` ≡ `README.md` | Low | root | `README.md` canonical | COMPLETED |
+| BUG-08 *(fixed)* | TrueForge wraps MCP tool failures as `{"error":[{"type":"text",…}]}`; FORGE showed every failed tool call as **successful** in the timeline | High | `trueforge-client/src/turn.ts` | unwrap envelope, readable message; live test asserts `ok:false` | COMPLETED |
+| BUG-09 *(fixed)* | A slow-model timeout was reported as "TrueForge is not reachable" | Medium | `classify.ts` | timeout → STALLED with local-model hint; 15 classifier tests from real payloads | COMPLETED |
+| BUG-10 *(fixed)* | Default `get_context` budget (24k) exceeded small models' windows → silent truncation / empty replies | High | `editor-mcp` | model-sized limits from TrueForge `context_length` | COMPLETED |
+| BUG-11 *(fixed)* | The new submit gate declined a *resumed* approval because the verified flag was not persisted | High | `controller.ts` | persist on verify + one-shot bypass on resume; VS Code resume scenario | COMPLETED |
+| BUG-12 *(fixed)* | `@` regex lost its backslashes inside a TS template literal — picker never opened | Medium | `webviewHtml.ts` | fixed; jsdom UI test | COMPLETED |
 | BUG-04 *(fixed)* | `tree-sitter.js` copied beside a `"type":"module"` package was loaded as ESM → `__filename` undefined → **symbol analysis silently empty inside the extension** | High | `scripts/build.mjs`, `parser.ts` | ship as `.cjs`; startup self-check warns if parsing is degraded | COMPLETED |
 | BUG-05 *(fixed)* | Closing the window cancelled the TrueForge turn (abort path called `sessions.cancel`) | High | `controller.ts`, `turn.ts` | separate `detach` signal | COMPLETED |
 | BUG-06 *(fixed)* | MCP endpoint port/token changed on restart, so a surviving turn lost its tools | High | `controller.ts` | persisted port + token (0600) | COMPLETED |
@@ -225,10 +242,9 @@ Not verified: behaviour inside VS Code; real TrueForge event shapes (spikes S1�
 
 ## G. Next Actions (prioritised)
 
-1. **Run Tasks A/B/C with real models** (≥2, ideally one OpenAI-compatible/local) through the installed extension; record pass/fail honestly with model names, where they ran and cost (FORGE-073). Tune `agents/*.instructions.md` only from observed failures. This is the single largest unknown.
-2. **Add a `LICENSE`** (owner's choice), push the repo public, run the CI workflow once on GitHub (FORGE-066/075/008).
-3. **Record the ≤4-minute demo** (A → B → C; TrueForge Sessions page visible during B) (FORGE-074).
-4. **Write the 8-heading write-up PDF** with an accurate scorecard and limitations (FORGE-070).
-5. Build the React UI from `Ui-regitry.md` in `client-end/` once the freeze is lifted (FORGE-013/014/037/039/055/057/058/059/061).
-6. Per-platform VSIX builds (ripgrep binary), signed/published only if wanted (publishing is out of scope for the competition).
-7. Measure UI cancel latency; add list virtualisation for very long timelines.
+1. **Run Task B with a capable model** (hosted, or a bigger/faster local one) through `npm run eval:real` and then through the extension; record pass/fail honestly. This is the largest remaining unknown (A2/B4).
+2. Open the extension with the React UI bundle present and exercise review/approval/cancel by hand; fix what breaks (I verified only the built-in fallback page and the protocol).
+3. Re-measure Task A/C with a second, stronger model to confirm the completeness gate generalises.
+4. Record the ≤4-minute demo (`docs/DEMO.md`) and finish the write-up placeholders with real numbers.
+5. Per-platform VSIX builds; run the CI workflow on GitHub once.
+6. Playwright/axe coverage of the React UI inside the extension host.

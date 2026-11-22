@@ -161,7 +161,7 @@ describe("propose → verify in shadow → submit (the safety story)", () => {
     expect(run).toMatchObject({ ok: true, exitCode: 0, ranIn: "shadow" });
     expect(run.stdout.trim()).toBe("False");
     // the same command against the real, unmodified tree would print True ("off" is not yet treated as false)
-    const real = execSync(`APP_DEBUG=off python3 -c "from app.helpers import get_debug_flag; print(get_debug_flag())"`, { cwd: root }).toString().trim();
+    const real = execSync(`APP_DEBUG=off PYTHONDONTWRITEBYTECODE=1 python3 -c "from app.helpers import get_debug_flag; print(get_debug_flag())"`, { cwd: root }).toString().trim();
     expect(real).toBe("True");
     expect(rd("app/helpers.py")).toBe(before);
 
